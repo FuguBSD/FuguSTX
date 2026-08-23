@@ -3,11 +3,16 @@
 # Pin the version so that local runs and CI agree on formatting
 PRETTIER = npx prettier@3.9.6
 
-.PHONY: help check prettier prettier-fix spec-check ste-lint test
+.PHONY: help deps check prettier prettier-fix spec-check ste-lint test
 
 # List the targets.
 help:
 	@awk '/^# / { c = substr($$0, 3) } /^[a-z][a-z-]*:/ { sub(/:.*/, ""); printf "  %-12s %s\n", $$0, c }' Makefile
+
+# Install the external dependencies from deps/<OS>.txt: the Scaleway CLI
+# into ~/.local/bin.
+deps:
+	scripts/deps runtime
 
 # Validate the specification and the plans.
 spec-check:
