@@ -4,3 +4,6 @@
 # Scratch space of the development rules.
 explore/
 SCRATCHPAD-*.md
+
+# Website build
+web/build/
