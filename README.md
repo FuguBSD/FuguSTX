@@ -26,8 +26,7 @@ The specification in [spec/](spec/index.md) is the authoritative reference. Read
 ```sh
 make deps        # install the Scaleway CLI
 make check       # spec-check + ste-lint + test; run it before each commit
-make prettier    # Markdown, JSON and YAML formatting check
-make help        # list the targets
+make format-md   # Markdown, JSON and YAML formatting check
 ```
 
 ## Commit scopes
