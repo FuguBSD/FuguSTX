@@ -67,16 +67,16 @@ unit, and the unit ID is the anchor in upper case:
 Each document specifies one area of work. The code of a document prefixes the
 IDs of its units.
 
-| Code | Document                               | Area                                                            |
-| ---- | -------------------------------------- | --------------------------------------------------------------- |
-| ENG  | [engine.md](engine.md)                 | The analysis engine, its interfaces, and the reference client   |
-| COR  | [corpus.md](corpus.md)                 | Data sources, license lanes, and the corpus buckets             |
-| TRN  | [training.md](training.md)             | Training passes, the teacher campaign, and the compute budget   |
-| EVL  | [evaluation.md](evaluation.md)         | The evaluation tiers and the artifact suite                     |
-| IAC  | [infrastructure.md](infrastructure.md) | The applied FuguTTX infrastructure, the dev host, and the image |
-| REG  | [register.md](register.md)             | The learning register and the scope of its claims               |
-| LIC  | [licensing.md](licensing.md)           | Licenses, attribution, and release integrity                    |
-| RSK  | [risks.md](risks.md)                   | Risks and their mitigations                                     |
+| Code | Document                               | Area                                                           |
+| ---- | -------------------------------------- | -------------------------------------------------------------- |
+| ENG  | [engine.md](engine.md)                 | The analysis engine, its interfaces, and the reference client  |
+| COR  | [corpus.md](corpus.md)                 | Data sources, license lanes, and the corpus buckets            |
+| TRN  | [training.md](training.md)             | Training passes, the teacher campaign, and the compute budget  |
+| EVL  | [evaluation.md](evaluation.md)         | The evaluation tiers and the artifact suite                    |
+| IAC  | [infrastructure.md](infrastructure.md) | The applied shared infrastructure, the dev host, and the image |
+| REG  | [register.md](register.md)             | The learning register and the scope of its claims              |
+| LIC  | [licensing.md](licensing.md)           | Licenses, attribution, and release integrity                   |
+| RSK  | [risks.md](risks.md)                   | Risks and their mitigations                                    |
 
 ## Governance documents
 

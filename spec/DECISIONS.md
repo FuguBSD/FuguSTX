@@ -72,12 +72,12 @@ minus the agent. Details: [evaluation](evaluation.md).
 
 <a id="t9"></a>
 
-## T9 — Infrastructure: the FuguTTX infrastructure spec, applied
+## T9 — Infrastructure: the shared infrastructure instructions, applied
 
 Same stacks, same layout, same state rules, same credential split, and the same
-watchdog. The tag prefix is `stx:`. The project gets its own Scaleway Project in
-the same Organization. The budget is EUR 300 per month. Details:
-[infrastructure](infrastructure.md).
+watchdog, from the `infra` pack of FuguBSD/Tooling. The tag prefix is `stx:`.
+The project gets its own Scaleway Project in the same Organization. The budget
+is EUR 300 per month. Details: [infrastructure](infrastructure.md).
 
 <a id="t10"></a>
 

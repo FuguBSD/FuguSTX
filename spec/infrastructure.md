@@ -1,35 +1,27 @@
 # Infrastructure
 
-FuguSTX runs on the FuguTTX infrastructure design.
-[The applied infrastructure](#iac-apply) states the substitutions and the
-transferred rules. [The dev host](#iac-devhost) states the host selection.
+FuguSTX runs on the shared FuguBSD infrastructure design.
+[The applied instructions](#iac-apply) state the substitutions and the inherited
+rules. [The dev host](#iac-devhost) states the host selection.
 [The image stack](#iac-image) states the guest image build.
 
 <a id="iac-apply"></a>
 
-## The applied FuguTTX infrastructure
+## The applied instructions
 
-The FuguTTX infrastructure document applies as written, with three substitutions
-([T9](DECISIONS.md#t9)). FuguSTX applies these rules first, so FuguTTX inherits
-tested rules. Rehearses: the FuguTTX IAC family.
+The synced [infra/CLAUDE.md](../infra/CLAUDE.md) holds the shared rules: naming,
+layout, tags, state, credentials, spend guardrails, and teardown. FuguSTX
+applies these rules first, so FuguTTX inherits tested rules
+([T9](DECISIONS.md#t9)). Rehearses: the FuguTTX IAC family.
 
-- **IAC-APPLY-1** — The tag prefix must be `stx:`.
+- **IAC-APPLY-1** — The project code must be `stx`, and the tag prefix must be
+  `stx:`.
 - **IAC-APPLY-2** — FuguSTX must have its own Scaleway Project, in the same
   Organization.
 - **IAC-APPLY-3** — The budget must be EUR 300 per month, with alerts at 50, 75,
   and 100 percent.
-- **IAC-APPLY-4** — Every other rule of the FuguTTX infrastructure document must
-  transfer verbatim.
-
-The transfer includes:
-
-- The four stacks: `persistent`, `dev`, `train`, and `image`.
-- The state backend, with its native lock.
-- The three-application credential split.
-- The train key over SSH, and never through state.
-- The watchdog, with heartbeat and claim.
-- The forecast check before each apply.
-- The teardown order.
+- **IAC-APPLY-4** — Every other rule of the synced instructions must apply as
+  written.
 
 <a id="iac-devhost"></a>
 
@@ -58,4 +50,3 @@ The stack makes the OpenBSD guest image. The
 
 - **IAC-IMAGE-1** — The stack must build the OpenBSD guest qcow2 with `fuguvm`
   and `autoinstall(8)`, exactly as FuguTTX IAC-IMAGE specifies.
-- **IAC-IMAGE-2** — FuguSTX must ship the first working copy of the recipe.
