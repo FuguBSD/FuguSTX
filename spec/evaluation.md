@@ -28,6 +28,9 @@ Three tiers make the evaluation:
 - **EVL-TIERS-5** — The first baseline run fixes each tier T1 threshold. A
   threshold in this document before that run is a guess. The specification must
   not hold a guess.
+- **EVL-TIERS-6** — The score script must match the scores of the
+  [UD tools](https://github.com/UniversalDependencies/tools) scorer `eval.py`
+  on UPOS, lemma, and LAS.
 
 <a id="evl-suite"></a>
 

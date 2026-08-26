@@ -8,15 +8,20 @@ the license of each component, and it states the release rules.
 ## The licenses
 
 Decision [T1](DECISIONS.md#t1) sets the base model, and
-[the corpus lanes](corpus.md#cor-lanes) set the data sources. The table names
-the license of each component.
+[the corpus sources](corpus.md#cor-sources) name the data sources. The table
+names the license of each component.
 
-| Component                                  | License                 |
-| ------------------------------------------ | ----------------------- |
-| The harness and all tooling                | ISC                     |
-| The base model                             | Apache 2.0              |
-| The training data, treebanks (UD EWT, GUM) | CC-BY-SA                |
-| The training data, prose                   | Public domain and CC-BY |
+| Component                             | License                            |
+| ------------------------------------- | ---------------------------------- |
+| The harness and all tooling           | ISC                                |
+| The base model                        | Apache 2.0                         |
+| The training data, treebank EWT       | CC BY-SA 4.0                       |
+| The training data, treebank GUM       | Public domain, CC-BY, and CC-BY-SA |
+| The training data, prose              | Public domain and CC-BY            |
+| The eval data, UD test splits and PUD | CC BY-SA                           |
+
+The GUM row names the licenses after the exclusion of the non-commercial
+documents (corpus COR-SOURCES-3).
 
 - **LIC-LIC-1** — Each component must carry the license that the table names.
 

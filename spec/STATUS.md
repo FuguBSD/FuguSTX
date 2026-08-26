@@ -34,6 +34,8 @@ phase applies.
 | [ENG-STE](engine.md#eng-ste)                 | open  | —       | —                                      |
 | [COR-BUCKETS](corpus.md#cor-buckets)         | open  | —       | —                                      |
 | [COR-LANES](corpus.md#cor-lanes)             | open  | —       | —                                      |
+| [COR-SOURCES](corpus.md#cor-sources)         | open  | —       | —                                      |
+| [COR-CONLLU](corpus.md#cor-conllu)           | open  | —       | —                                      |
 | [COR-AUG](corpus.md#cor-aug)                 | open  | —       | —                                      |
 | [TRN-INST](training.md#trn-inst)             | open  | —       | —                                      |
 | [TRN-CPT](training.md#trn-cpt)               | open  | —       | —                                      |
