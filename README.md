@@ -24,8 +24,10 @@ is the authoritative reference.
 ```sh
 make deps        # install the Scaleway CLI
 make check       # spec-check + ste-lint + test; run it before each commit
-make format-md   # Markdown, JSON and YAML formatting check
 ```
+
+`make check` runs the Markdown format gate, and prettier runs through bunx. The
+operator installs bun, for example from Homebrew. No deps manifest provides it.
 
 ## Commit scopes
 
