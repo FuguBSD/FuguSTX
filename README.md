@@ -7,9 +7,9 @@ FuguSTX turns raw English text into offset-faithful linguistic annotations:
 tokens, sentences, universal POS tags, lemmas, morphological features, and
 dependency relations. A linter consumes the annotations and stays a rulebook.
 
-The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU only. The
-`stx` harness — Perl 5 over Fugu — computes every byte offset, and the model
-labels the tokens.
+The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU only. The `stx`
+harness — Perl 5 over Fugu — computes every byte offset, and the model labels
+the tokens.
 
 The build rehearses the FuguTTX production pipeline at small scale, on the same
 components, at real prices. Cheap learnings are a deliverable.
