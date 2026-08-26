@@ -29,8 +29,8 @@ Three tiers make the evaluation:
   threshold in this document before that run is a guess. The specification must
   not hold a guess.
 - **EVL-TIERS-6** — The score script must match the scores of the
-  [UD tools](https://github.com/UniversalDependencies/tools) scorer `eval.py`
-  on UPOS, lemma, and LAS.
+  [UD tools](https://github.com/UniversalDependencies/tools) scorer `eval.py` on
+  UPOS, lemma, and LAS.
 
 <a id="evl-suite"></a>
 

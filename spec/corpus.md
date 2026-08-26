@@ -47,21 +47,21 @@ release before each campaign.
 PUD holds one test split only, so it serves the eval lane alone. The sibling
 treebank UD_English-GUMReddit ships masked text, and it is not a source.
 
-- **COR-SOURCES-1** — The pipeline must pin each treebank to one UD release
-  tag, and it must record the tag.
+- **COR-SOURCES-1** — The pipeline must pin each treebank to one UD release tag,
+  and it must record the tag.
 - **COR-SOURCES-2** — The pipeline must fetch each `.conllu` file from the
   treebank repository at the pinned tag, for example
   `https://raw.githubusercontent.com/UniversalDependencies/UD_English-EWT/r2.18/en_ewt-ud-train.conllu`.
-- **COR-SOURCES-3** — The wikiHow and the fiction documents of GUM carry
-  CC BY-NC-SA 4.0. The pipeline must exclude each GUM document with a
+- **COR-SOURCES-3** — The wikiHow and the fiction documents of GUM carry CC
+  BY-NC-SA 4.0. The pipeline must exclude each GUM document with a
   non-commercial license, per [LIC-RELEASE-4](licensing.md#lic-release). The
   [GUM license file](https://raw.githubusercontent.com/UniversalDependencies/UD_English-GUM/r2.18/LICENSE.txt)
   names the license of each source.
 - **COR-SOURCES-4** — The prose lane must hold these public-domain books from
   Project Gutenberg: [37134](https://www.gutenberg.org/ebooks/37134), The
-  Elements of Style; [6409](https://www.gutenberg.org/ebooks/6409), How to
-  Speak and Write Correctly; and
-  [45814](https://www.gutenberg.org/ebooks/45814), An Advanced English Grammar.
+  Elements of Style; [6409](https://www.gutenberg.org/ebooks/6409), How to Speak
+  and Write Correctly; and [45814](https://www.gutenberg.org/ebooks/45814), An
+  Advanced English Grammar.
 - **COR-SOURCES-5** — The pipeline must strip the Project Gutenberg header and
   footer from each book.
 
@@ -87,8 +87,8 @@ on a range line:
 5	Star	Star	PROPN	NNP	Number=Sing	0	root	0:root	_
 ```
 
-The reader turns a treebank file into training pairs. These rules keep the
-pairs faithful to [the schema](engine.md#eng-schema) and to the harness offsets
+The reader turns a treebank file into training pairs. These rules keep the pairs
+faithful to [the schema](engine.md#eng-schema) and to the harness offsets
 ([ENG-SPLIT](engine.md#eng-split)).
 
 - **COR-CONLLU-1** — The reader must take the raw sentence text from the
@@ -97,12 +97,11 @@ pairs faithful to [the schema](engine.md#eng-schema) and to the harness offsets
 - **COR-CONLLU-2** — A range ID line (`2-3`) marks a multiword token, and it
   carries no annotation. The reader must expand the range, and it must exclude
   the range line from the label targets.
-- **COR-CONLLU-3** — The DEPS column and a decimal ID line (`5.1`) belong to
-  the enhanced graph. The reader must strip both: the schema holds basic
+- **COR-CONLLU-3** — The DEPS column and a decimal ID line (`5.1`) belong to the
+  enhanced graph. The reader must strip both: the schema holds basic
   dependencies only.
 - **COR-CONLLU-4** — The reader must strip the GUM extra payload: `# meta::`
-  comments, `global.Entity` comments, and the discourse and entity tags in
-  MISC.
+  comments, `global.Entity` comments, and the discourse and entity tags in MISC.
 - **COR-CONLLU-5** — A FORM can hold the literal underscore, and EWT holds five
   such tokens. The reader must not treat that FORM as an empty field.
 
