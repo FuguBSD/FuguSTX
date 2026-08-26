@@ -25,6 +25,12 @@ jobs:
       - name: Check
         run: make check
 
+      # EVL-TIERS-2: tier T0 runs on the CPU, on every commit. No model
+      # exists before phase P3, so this scores the freshly-fetched dev
+      # split against itself.
+      - name: Tier T0 self-check
+        run: uv run --locked python -m stx_corpus.t0
+
       - name: Drift gate
         if: github.event_name == 'pull_request'
         run: scripts/spec-check --drift "origin/${{ github.base_ref }}"

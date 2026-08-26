@@ -23,41 +23,41 @@ phase applies.
 
 ## Units
 
-| Unit                                         | State | Done by | Note                                   |
-| -------------------------------------------- | ----- | ------- | -------------------------------------- |
-| [ENG-SPLIT](engine.md#eng-split)             | open  | —       | —                                      |
-| [ENG-SCHEMA](engine.md#eng-schema)           | open  | —       | —                                      |
-| [ENG-DETERM](engine.md#eng-determ)           | open  | —       | —                                      |
-| [ENG-CONTRACT](engine.md#eng-contract)       | open  | —       | —                                      |
-| [ENG-IFACE](engine.md#eng-iface)             | open  | —       | —                                      |
-| [ENG-LEXICON](engine.md#eng-lexicon)         | open  | —       | —                                      |
-| [ENG-STE](engine.md#eng-ste)                 | open  | —       | —                                      |
-| [COR-BUCKETS](corpus.md#cor-buckets)         | open  | —       | —                                      |
-| [COR-LANES](corpus.md#cor-lanes)             | open  | —       | —                                      |
-| [COR-SOURCES](corpus.md#cor-sources)         | open  | —       | —                                      |
-| [COR-CONLLU](corpus.md#cor-conllu)           | open  | —       | —                                      |
-| [COR-AUG](corpus.md#cor-aug)                 | open  | —       | —                                      |
-| [TRN-INST](training.md#trn-inst)             | open  | —       | —                                      |
-| [TRN-CPT](training.md#trn-cpt)               | open  | —       | —                                      |
-| [TRN-SFT](training.md#trn-sft)               | open  | —       | —                                      |
-| [TRN-TEACH](training.md#trn-teach)           | open  | —       | —                                      |
-| [TRN-EXEC](training.md#trn-exec)             | open  | —       | —                                      |
-| [TRN-BUDGET](training.md#trn-budget)         | open  | —       | —                                      |
-| [EVL-TIERS](evaluation.md#evl-tiers)         | open  | —       | —                                      |
-| [EVL-SUITE](evaluation.md#evl-suite)         | open  | —       | —                                      |
-| [IAC-APPLY](infrastructure.md#iac-apply)     | open  | —       | —                                      |
-| [IAC-DEVHOST](infrastructure.md#iac-devhost) | open  | —       | —                                      |
-| [IAC-IMAGE](infrastructure.md#iac-image)     | open  | —       | —                                      |
-| [REG-DELIVER](register.md#reg-deliver)       | open  | —       | —                                      |
-| [REG-MAP](register.md#reg-map)               | n-a   | —       | Citation only. The planned rehearsals. |
-| [REG-SCOPE](register.md#reg-scope)           | n-a   | —       | Citation only. A constraint on claims. |
-| [LIC-LIC](licensing.md#lic-lic)              | open  | —       | —                                      |
-| [LIC-RELEASE](licensing.md#lic-release)      | open  | —       | —                                      |
-| [RSK-ACC](risks.md#rsk-acc)                  | n-a   | —       | Citation only.                         |
-| [RSK-DETERM](risks.md#rsk-determ)            | n-a   | —       | Citation only.                         |
-| [RSK-FINDINGS](risks.md#rsk-findings)        | n-a   | —       | Citation only.                         |
-| [RSK-SCOPE](risks.md#rsk-scope)              | n-a   | —       | Citation only.                         |
-| [RSK-SEQ](risks.md#rsk-seq)                  | n-a   | —       | Citation only.                         |
+| Unit                                         | State   | Done by | Note                                                                                                                                                                                                   |
+| -------------------------------------------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [ENG-SPLIT](engine.md#eng-split)             | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-SCHEMA](engine.md#eng-schema)           | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-DETERM](engine.md#eng-determ)           | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-CONTRACT](engine.md#eng-contract)       | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-IFACE](engine.md#eng-iface)             | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-LEXICON](engine.md#eng-lexicon)         | open    | —       | —                                                                                                                                                                                                      |
+| [ENG-STE](engine.md#eng-ste)                 | open    | —       | —                                                                                                                                                                                                      |
+| [COR-BUCKETS](corpus.md#cor-buckets)         | open    | —       | —                                                                                                                                                                                                      |
+| [COR-LANES](corpus.md#cor-lanes)             | done    | P1      | [lanes.py](../packages/stx-corpus/src/stx_corpus/lanes.py)                                                                                                                                             |
+| [COR-SOURCES](corpus.md#cor-sources)         | done    | P1      | [fetch.py](../packages/stx-corpus/src/stx_corpus/fetch.py), [gum_license.py](../packages/stx-corpus/src/stx_corpus/gum_license.py), [gutenberg.py](../packages/stx-corpus/src/stx_corpus/gutenberg.py) |
+| [COR-CONLLU](corpus.md#cor-conllu)           | done    | P1      | [conllu.py](../packages/stx-corpus/src/stx_corpus/conllu.py)                                                                                                                                           |
+| [COR-AUG](corpus.md#cor-aug)                 | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-INST](training.md#trn-inst)             | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-CPT](training.md#trn-cpt)               | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-SFT](training.md#trn-sft)               | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-TEACH](training.md#trn-teach)           | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-EXEC](training.md#trn-exec)             | open    | —       | —                                                                                                                                                                                                      |
+| [TRN-BUDGET](training.md#trn-budget)         | open    | —       | —                                                                                                                                                                                                      |
+| [EVL-TIERS](evaluation.md#evl-tiers)         | partial | P1      | `packages/stx-corpus/src/stx_corpus/score.py`, `t0.py`. EVL-TIERS-1, EVL-TIERS-3, EVL-TIERS-4, EVL-TIERS-5 wait on phases P2, P3, and P5.                                                              |
+| [EVL-SUITE](evaluation.md#evl-suite)         | open    | —       | —                                                                                                                                                                                                      |
+| [IAC-APPLY](infrastructure.md#iac-apply)     | open    | —       | —                                                                                                                                                                                                      |
+| [IAC-DEVHOST](infrastructure.md#iac-devhost) | open    | —       | —                                                                                                                                                                                                      |
+| [IAC-IMAGE](infrastructure.md#iac-image)     | open    | —       | —                                                                                                                                                                                                      |
+| [REG-DELIVER](register.md#reg-deliver)       | open    | —       | —                                                                                                                                                                                                      |
+| [REG-MAP](register.md#reg-map)               | n-a     | —       | Citation only. The planned rehearsals.                                                                                                                                                                 |
+| [REG-SCOPE](register.md#reg-scope)           | n-a     | —       | Citation only. A constraint on claims.                                                                                                                                                                 |
+| [LIC-LIC](licensing.md#lic-lic)              | open    | —       | —                                                                                                                                                                                                      |
+| [LIC-RELEASE](licensing.md#lic-release)      | open    | —       | —                                                                                                                                                                                                      |
+| [RSK-ACC](risks.md#rsk-acc)                  | n-a     | —       | Citation only.                                                                                                                                                                                         |
+| [RSK-DETERM](risks.md#rsk-determ)            | n-a     | —       | Citation only.                                                                                                                                                                                         |
+| [RSK-FINDINGS](risks.md#rsk-findings)        | n-a     | —       | Citation only.                                                                                                                                                                                         |
+| [RSK-SCOPE](risks.md#rsk-scope)              | n-a     | —       | Citation only.                                                                                                                                                                                         |
+| [RSK-SEQ](risks.md#rsk-seq)                  | n-a     | —       | Citation only.                                                                                                                                                                                         |
 
 ## Update protocol
 
@@ -68,19 +68,19 @@ phase applies.
 
 ## Code roots
 
-The drift gate maps each document to the code that implements it. No code
-exists, so every value is "—". Set the roots when the layout lands.
+The drift gate maps each document to the code that implements it. A document
+with no code keeps "—". Set the roots when the layout lands.
 
-| Document          | Roots |
-| ----------------- | ----- |
-| engine.md         | —     |
-| corpus.md         | —     |
-| training.md       | —     |
-| evaluation.md     | —     |
-| infrastructure.md | —     |
-| register.md       | —     |
-| licensing.md      | —     |
-| risks.md          | —     |
+| Document          | Roots                 |
+| ----------------- | --------------------- |
+| engine.md         | —                     |
+| corpus.md         | `packages/stx-corpus` |
+| training.md       | —                     |
+| evaluation.md     | `packages/stx-corpus` |
+| infrastructure.md | —                     |
+| register.md       | —                     |
+| licensing.md      | —                     |
+| risks.md          | —                     |
 
 ## Retired IDs
 

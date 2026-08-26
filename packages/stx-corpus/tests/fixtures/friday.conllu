@@ -1,0 +1,8 @@
+# sent_id = weblog-juancole.com_juancole_20040604210986_ENG_20040604_210986-0001
+# text = From Friday's Daily Star
+1	From	from	ADP	IN	_	5	case	5:case	_
+2-3	Friday's	_	_	_	_	_	_	_	_
+2	Friday	Friday	PROPN	NNP	Number=Sing	5	nmod:poss	5:nmod:poss	_
+3	's	's	PART	POS	_	2	case	2:case	_
+4	Daily	Daily	ADJ	NNP	Degree=Pos	5	amod	5:amod	_
+5	Star	Star	PROPN	NNP	Number=Sing	0	root	0:root	_
