@@ -64,6 +64,8 @@ treebank UD_English-GUMReddit ships masked text, and it is not a source.
   Advanced English Grammar.
 - **COR-SOURCES-5** — The pipeline must strip the Project Gutenberg header and
   footer from each book.
+- **COR-SOURCES-6** — The pipeline must exclude a GUM document with no provable
+  license. It must not default to including the document.
 
 <a id="cor-conllu"></a>
 

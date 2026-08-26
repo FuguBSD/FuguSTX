@@ -1,0 +1,12 @@
+# global.Entity = etype-head-other
+# meta::dateCollected = 2013-01-01
+# sent_id = test-0001
+# text = He said "_" twice.
+1	He	he	PRON	PRP	_	2	nsubj	_	_
+2	said	say	VERB	VBD	_	0	root	_	_
+3	"	"	PUNCT	``	_	5	punct	_	SpaceAfter=No
+4	_	_	PUNCT	SYM	_	5	amod	_	Entity=(object-1)|SpaceAfter=No
+4.1	elided	elide	VERB	VB	_	_	_	5:orphan	_
+5	"	"	PUNCT	''	_	2	obj	_	Discourse=elaboration|SpaceAfter=No
+6	twice	twice	ADV	RB	_	2	advmod	_	SpaceAfter=No
+7	.	.	PUNCT	.	_	2	punct	_	_
