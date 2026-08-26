@@ -22,6 +22,13 @@ jobs:
       - name: Setup bun
         uses: FuguBSD/Tooling/actions/setup-bun@main
 
+      # infra-fmt-check and infra-validate need the OpenTofu binary that
+      # deps/Linux.txt names.
+      - name: Install dependencies
+        run: |
+          make deps
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Check
         run: make check
 

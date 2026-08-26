@@ -32,7 +32,7 @@ phase applies.
 | [ENG-IFACE](engine.md#eng-iface)             | open    | —       | —                                                                                                                                                                                                      |
 | [ENG-LEXICON](engine.md#eng-lexicon)         | open    | —       | —                                                                                                                                                                                                      |
 | [ENG-STE](engine.md#eng-ste)                 | open    | —       | —                                                                                                                                                                                                      |
-| [COR-BUCKETS](corpus.md#cor-buckets)         | open    | —       | —                                                                                                                                                                                                      |
+| [COR-BUCKETS](corpus.md#cor-buckets)         | partial | P2      | [infra/persistent](../infra/persistent/main.tf) declares the four buckets. The Operator apply is pending; see [the runbook](../infra/persistent/RUNBOOK.md).                                           |
 | [COR-LANES](corpus.md#cor-lanes)             | done    | P1      | [lanes.py](../packages/stx-corpus/src/stx_corpus/lanes.py)                                                                                                                                             |
 | [COR-SOURCES](corpus.md#cor-sources)         | done    | P1      | [fetch.py](../packages/stx-corpus/src/stx_corpus/fetch.py), [gum_license.py](../packages/stx-corpus/src/stx_corpus/gum_license.py), [gutenberg.py](../packages/stx-corpus/src/stx_corpus/gutenberg.py) |
 | [COR-CONLLU](corpus.md#cor-conllu)           | done    | P1      | [conllu.py](../packages/stx-corpus/src/stx_corpus/conllu.py)                                                                                                                                           |
@@ -45,9 +45,9 @@ phase applies.
 | [TRN-BUDGET](training.md#trn-budget)         | open    | —       | —                                                                                                                                                                                                      |
 | [EVL-TIERS](evaluation.md#evl-tiers)         | partial | P1      | `packages/stx-corpus/src/stx_corpus/score.py`, `t0.py`. EVL-TIERS-1, EVL-TIERS-3, EVL-TIERS-4, EVL-TIERS-5 wait on phases P2, P3, and P5.                                                              |
 | [EVL-SUITE](evaluation.md#evl-suite)         | open    | —       | —                                                                                                                                                                                                      |
-| [IAC-APPLY](infrastructure.md#iac-apply)     | open    | —       | —                                                                                                                                                                                                      |
+| [IAC-APPLY](infrastructure.md#iac-apply)     | partial | P2      | [infra/persistent](../infra/persistent/main.tf) declares the applied rules. The Project, the apply, and the budget alerts wait on the Operator; see [the runbook](../infra/persistent/RUNBOOK.md).     |
 | [IAC-DEVHOST](infrastructure.md#iac-devhost) | open    | —       | —                                                                                                                                                                                                      |
-| [IAC-IMAGE](infrastructure.md#iac-image)     | open    | —       | —                                                                                                                                                                                                      |
+| [IAC-IMAGE](infrastructure.md#iac-image)     | open    | —       | [infra/image](../infra/image) holds the empty stack skeleton only. No rule of this unit is implemented yet.                                                                                            |
 | [REG-DELIVER](register.md#reg-deliver)       | open    | —       | —                                                                                                                                                                                                      |
 | [REG-MAP](register.md#reg-map)               | n-a     | —       | Citation only. The planned rehearsals.                                                                                                                                                                 |
 | [REG-SCOPE](register.md#reg-scope)           | n-a     | —       | Citation only. A constraint on claims.                                                                                                                                                                 |
@@ -77,7 +77,7 @@ with no code keeps "—". Set the roots when the layout lands.
 | corpus.md         | `packages/stx-corpus` |
 | training.md       | —                     |
 | evaluation.md     | `packages/stx-corpus` |
-| infrastructure.md | —                     |
+| infrastructure.md | `infra/persistent`    |
 | register.md       | —                     |
 | licensing.md      | —                     |
 | risks.md          | —                     |
