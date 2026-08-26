@@ -98,8 +98,8 @@ faithful to [the schema](engine.md#eng-schema) and to the harness offsets
   carries no annotation. The reader must expand the range, and it must exclude
   the range line from the label targets.
 - **COR-CONLLU-3** — The DEPS column and a decimal ID line (`5.1`) belong to the
-  enhanced graph. The reader must strip both: the schema holds basic
-  dependencies only.
+  UD `enhanced dependencies` graph. The reader must strip both: the schema
+  holds basic dependencies only.
 - **COR-CONLLU-4** — The reader must strip the GUM extra payload: `# meta::`
   comments, `global.Entity` comments, and the discourse and entity tags in MISC.
 - **COR-CONLLU-5** — A FORM can hold the literal underscore, and EWT holds five
