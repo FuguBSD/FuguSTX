@@ -133,7 +133,7 @@ each absent part.
     and down, the teardown completeness, and the train key delivery. Record the
     watchdog and the claim protocol. Record Axolotl in Docker, the checkpoint
     sync, the CPT decision, and the SFT scores. Map each entry to its FuguTTX
-    units, per [the planned rehearsals](../../spec/LEARNING.md#lrn-map).
+    units, per [the rehearsal index](../../spec/LEARNING.md#lrn-map).
 14. Set [STATUS.md](../../spec/STATUS.md): TRN-INST, TRN-CPT, TRN-SFT, TRN-EXEC,
     TRN-BUDGET, ENG-SCHEMA, ENG-SPLIT, and COR-BUCKETS per the campaign result.
     Trim the EVL-TIERS and LRN-DELIVER notes. Set the IAC-APPLY note: it must

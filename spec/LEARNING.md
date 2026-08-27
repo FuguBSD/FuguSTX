@@ -1,8 +1,11 @@
 # Learning
 
-This document holds the learning of the pilot. It records what each campaign
-teaches about the FuguTTX specification. An entry is a dated record of one
-campaign, and it is not a design statement. The
+This document is the evidence ledger of the pilot. It records what each
+completed rehearsal teaches about the FuguTTX specification. An entry is a
+dated, append-only record with its evidence, and it is not a design statement.
+[The rehearsal index](#lrn-map) points from each pilot component to its entries.
+The edited set lives downstream: a finding lands in FuguTTX `docs/research/`,
+and a contradiction becomes a FuguTTX specification change. The
 [implementation register](STATUS.md) is a different document, and it records
 implementation state.
 
@@ -18,40 +21,68 @@ The learning is the deliverable of G2, per decision [T11](DECISIONS.md#t11).
   directory.
 - **LRN-DELIVER-3** — A finding that contradicts the FuguTTX specification must
   become a FuguTTX specification change, not a note.
+- **LRN-DELIVER-4** — An entry must record one completed rehearsal, with its
+  evidence: a probe, an apply, a run, or a measurement. Authoring work alone
+  must not produce an entry.
+- **LRN-DELIVER-5** — An entry that corrects an earlier claim must name the
+  entry that it corrects. Do not edit the earlier entry.
 
 <a id="lrn-map"></a>
 
-## The planned rehearsals
+## The rehearsal index
 
-Each row of the table is a planned rehearsal, and each campaign appends
-findings. One row exists for each pilot component. "The shared instructions"
-names the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
+One row exists for each pilot component. A row names the FuguTTX units that the
+component rehearses, and the dated entries that hold its findings. An entry is
+the one source of a finding: a row only points. "The shared instructions" names
+the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
 
-| Pilot component                                | FuguTTX units rehearsed                             |
-| ---------------------------------------------- | --------------------------------------------------- |
-| H100 quota request and grant time              | FuguTTX IAC-TRAIN, FuguTTX IAC-PREREQ               |
-| Live price read before apply                   | FuguTTX IAC-PREREQ, the shared instructions         |
-| State backend, native lock, encryption         | The shared instructions                             |
-| Three-application credential split             | The shared instructions, FuguTTX D9                 |
-| Train key over SSH, expiry backstop            | The shared instructions                             |
-| Watchdog, heartbeat, claim protocol            | The shared instructions                             |
-| Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          |
-| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  |
-| Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        |
-| CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        |
-| Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         |
-| Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     |
-| KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      |
-| Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   |
-| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification |
+| Pilot component                                | FuguTTX units rehearsed                             | Entries                |
+| ---------------------------------------------- | --------------------------------------------------- | ---------------------- |
+| H100 quota request and grant time              | FuguTTX IAC-TRAIN, FuguTTX IAC-PREREQ               | 2026-08-25             |
+| Live price read before apply                   | FuguTTX IAC-PREREQ, the shared instructions         | —                      |
+| Budget ownership in the shared Organization    | FuguTTX IAC-PREREQ, the shared instructions         | 2026-08-26             |
+| State backend, native lock, encryption         | The shared instructions                             | 2026-08-26             |
+| Three-application credential split             | The shared instructions, FuguTTX D9                 | 2026-08-25, 2026-08-26 |
+| Operator network and key delivery              | The shared instructions, FuguTTX IAC-DEV            | 2026-08-26             |
+| Train key over SSH, expiry backstop            | The shared instructions                             | —                      |
+| Watchdog, heartbeat, claim protocol            | The shared instructions                             | —                      |
+| Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          | —                      |
+| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | —                      |
+| Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | —                      |
+| CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        | —                      |
+| Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         | —                      |
+| Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     | 2026-08-26             |
+| KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      | 2026-08-26             |
+| Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | —                      |
+| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | —                      |
 
 <a id="lrn-entries"></a>
 
 ## The entries
 
-Each entry records what one campaign taught, with the FuguTTX units it maps to,
-per [the planned rehearsals](#lrn-map). The scope rules of
-[the claims](#lrn-scope) apply to every entry.
+Each entry records what one rehearsal taught, with the FuguTTX units it maps to,
+per [the rehearsal index](#lrn-map). The scope rules of [the claims](#lrn-scope)
+apply to every entry.
+
+### 2026-08-25 — The credential and quota probes
+
+- **Quota by default.** A probe created and deleted one H100-1-80G server in
+  `fr-par-2`, with no support request. The grant existed already, so a quota
+  request has nothing to measure in this Organization. The useful procedure is a
+  probe of each declared offer before a campaign, and
+  [training.md](training.md#trn-inst) now states it. The same correction is a
+  candidate for the FuguTTX quota prerequisite, per LRN-DELIVER-3. Scope: this
+  proves the H100-1-80G offer, in this Organization, on this date. It proves no
+  other offer: the L40S-1-48G quota stays unproven. Maps to: FuguTTX IAC-TRAIN,
+  FuguTTX IAC-PREREQ.
+- **Credential scope drift.** The agent key creates every dev, train, and image
+  resource type. The platform denies the same key `billing consumption list`,
+  although its policy states the operator scope. A policy document is not a
+  permission: only a platform response proves authorization, as the shared
+  verification rule states. [The runbook](../infra/persistent/RUNBOOK.md)
+  records the probe, and the next persistent apply confirms the policy rules.
+  Scope: one Organization, one policy set, one day. Maps to: the shared
+  instructions, FuguTTX D9.
 
 ### 2026-08-26 — The persistent stack and the KVM test
 
