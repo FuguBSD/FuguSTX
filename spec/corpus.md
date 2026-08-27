@@ -9,8 +9,12 @@ Rehearses: FuguTTX IAC-PERSIST, FuguTTX D6.
 
 - **COR-BUCKETS-1** — The project must use four buckets: `stx-corpus`,
   `stx-evalcorpus`, `stx-checkpoints`, and `stx-artifacts`.
-- **COR-BUCKETS-2** — Each bucket must apply the same versioning and lifecycle
-  rules as the FuguTTX bucket set.
+- **COR-BUCKETS-2** — Versioning must be on for `stx-corpus`, `stx-evalcorpus`,
+  and `stx-artifacts`. `stx-checkpoints` must hold no version, because a
+  checkpoint is large and Scaleway bills each version. Object Storage suspends
+  versioning, and it never removes versioning.
+- **COR-BUCKETS-3** — A checkpoint key must carry the run identifier and the
+  step number. No version protects an overwrite on `stx-checkpoints`.
 
 <a id="cor-lanes"></a>
 

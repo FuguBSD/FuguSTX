@@ -25,7 +25,7 @@ choice.
 ## Deliverables
 
 The deliverables are the model, the `stx` engine, the `stx-ste` reference
-client, and [the learning register](register.md).
+client, and [the learning](LEARNING.md).
 
 ## Accepted costs
 

@@ -2,9 +2,8 @@
 
 Implements corpus.md COR-LANES, COR-SOURCES, and COR-CONLLU end to end.
 
-Phase P1 has no Scaleway bucket. COR-BUCKETS waits on phase P2's persistent
-stack. This module writes to a local directory as a placeholder for the
-future bucket path.
+The corpus buckets of COR-BUCKETS exist. This module writes to a local
+directory, and a later phase adds the upload to `stx-corpus`.
 """
 
 from __future__ import annotations

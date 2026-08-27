@@ -17,8 +17,8 @@ H100 quota by default, so the quota request is a rehearsal.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
-- **TRN-INST-2** — [The learning register](register.md#reg-deliver) must record
-  the response time of the quota request.
+- **TRN-INST-2** — [LEARNING](LEARNING.md#lrn-deliver) must record the response
+  time of the quota request.
 
 <a id="trn-cpt"></a>
 
@@ -31,7 +31,7 @@ Rehearses: FuguTTX TRN-CPT.
   on [the prose lane](corpus.md#cor-lanes).
 - **TRN-CPT-2** — When the pass does not move the scores, the product must drop
   the pass.
-- **TRN-CPT-3** — When the product drops the pass, the register must record why.
+- **TRN-CPT-3** — When the product drops the pass, LEARNING must record why.
 
 <a id="trn-sft"></a>
 
@@ -52,7 +52,7 @@ FuguTTX TRN-SFT.
 
 The teacher proposes, and a verifier disposes ([T5](DECISIONS.md#t5)). The SSH
 tunnel is the FuguTTX transport, rehearsed exactly. FuguTTX stakes its data
-quality on the same filter pattern, so the filter results are register entries.
+quality on the same filter pattern, so the filter results are LEARNING entries.
 Rehearses: FuguTTX TRN-AUG.
 
 The judge filter applies three checks to each proposed record:
@@ -68,7 +68,7 @@ The judge filter applies three checks to each proposed record:
 - **TRN-TEACH-4** — The judge filter must accept a record only when the three
   checks pass.
 - **TRN-TEACH-5** — The filter must log each rejected record with its reason.
-- **TRN-TEACH-6** — The register must record the filter design and the rejection
+- **TRN-TEACH-6** — LEARNING must record the filter design and the rejection
   rates.
 
 <a id="trn-exec"></a>
