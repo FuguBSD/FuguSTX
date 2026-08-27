@@ -33,8 +33,7 @@ at low stakes. The L40S stays as the budget escape. Details:
 
 Mirrors the shape of FuguTTX D4, at near 1/1000 of the scale. The CPT pass
 exists to rehearse `make train-cpt`. If the pass does not move the scores, the
-product drops it, and the register records why. Details:
-[training](training.md).
+product drops it, and LEARNING records why. Details: [training](training.md).
 
 <a id="t5"></a>
 
@@ -89,8 +88,8 @@ requirement, not a hope. Details: [engine](engine.md).
 
 <a id="t11"></a>
 
-## T11 — The learning register is a deliverable
+## T11 — The learning is a deliverable
 
-Every campaign ends with a register entry that maps its outcome to FuguTTX spec
+Every campaign ends with a LEARNING entry that maps its outcome to FuguTTX spec
 units. A learning that contradicts the FuguTTX spec must become a FuguTTX spec
-change, not a note. Details: [register](register.md).
+change, not a note. Details: [learning](LEARNING.md).

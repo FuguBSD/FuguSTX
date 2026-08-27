@@ -26,9 +26,13 @@ CHECK_TARGETS += infra-check
 infra-fmt-check:
 	$(TOFU) fmt -recursive -check infra
 
+# The validate run keeps its own data directory, nested inside the
+# gitignored .terraform/. A checkout that applied a stack holds a
+# backend-initialized .terraform/, and a plain init -backend=false
+# would demand the backend credential there.
 infra-validate:
 	@test -n "$(STACK)" || { echo "usage: make infra-validate STACK=<name>"; exit 1; }
-	cd infra/$(STACK) && $(TOFU) init -backend=false -input=false >/dev/null && $(TOFU) validate
+	cd infra/$(STACK) && TF_DATA_DIR=.terraform/validate $(TOFU) init -backend=false -input=false >/dev/null && TF_DATA_DIR=.terraform/validate $(TOFU) validate
 
 infra-check: infra-fmt-check
 	@for stack in $(INFRA_STACKS); do \

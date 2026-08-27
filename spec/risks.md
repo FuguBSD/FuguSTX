@@ -1,7 +1,7 @@
 # Risks
 
 This document names the risks of the pilot, and it names the mitigation of each
-risk. The units are citation-only: a plan or a register entry can cite a risk,
+risk. The units are citation-only: a plan or a LEARNING entry can cite a risk,
 and no code implements one.
 
 <a id="rsk-acc"></a>
@@ -25,14 +25,14 @@ llama.cpp output can vary with thread count and version. The pins of decision
 ## Misleading findings
 
 The pilot can produce false confidence about 4B-scale behavior.
-[REG-SCOPE](register.md#reg-scope) bounds every claim.
+[LRN-SCOPE](LEARNING.md#lrn-scope) bounds every claim.
 
 <a id="rsk-scope"></a>
 
 ## Scope leak
 
 G2 pulls the project toward FuguTTX features. The test: FuguSTX builds nothing
-that neither G1 nor a register row can name.
+that neither G1 nor a LEARNING row can name.
 
 <a id="rsk-seq"></a>
 

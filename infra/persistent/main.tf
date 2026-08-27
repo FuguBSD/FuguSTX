@@ -23,10 +23,11 @@ resource "scaleway_iam_application" "train" {
 }
 
 # The pipeline policy must not hold IAMManager, OrganizationManager, or
-# ProjectManager.
+# ProjectManager. A rule holds permission sets of one scope type only,
+# so the org-scoped billing read gets its own rule.
 resource "scaleway_iam_policy" "pipeline" {
   name           = "stx.prod.pipeline"
-  description    = "Compute, Object Storage, and billing read, in this project."
+  description    = "Compute and Object Storage in this project, and billing read."
   application_id = scaleway_iam_application.pipeline.id
 
   rule {
@@ -35,24 +36,37 @@ resource "scaleway_iam_policy" "pipeline" {
       "InstancesFullAccess",
       "ElasticMetalFullAccess",
       "ObjectStorageFullAccess",
-      "BillingReadOnly",
     ]
+  }
+
+  rule {
+    organization_id      = scaleway_iam_application.pipeline.organization_id
+    permission_set_names = ["BillingReadOnly"]
   }
 }
 
 # The operator policy adds the IAM, Object Storage, and billing
-# administration that only infra/persistent needs.
+# administration that only infra/persistent needs. IAM and billing are
+# products of the organization, so their permission sets sit in an
+# organization-scoped rule.
 resource "scaleway_iam_policy" "operator" {
   name           = "stx.prod.operator"
-  description    = "IAM, Object Storage, and billing administration, in this project."
+  description    = "Object Storage in this project, and IAM and billing administration."
   application_id = scaleway_iam_application.operator.id
 
   rule {
     project_ids = [data.scaleway_account_project.current.id]
     permission_set_names = [
+      "ObjectStorageFullAccess",
+      "ObjectStorageBucketPolicyFullAccess",
+    ]
+  }
+
+  rule {
+    organization_id = scaleway_iam_application.operator.organization_id
+    permission_set_names = [
       "IAMApplicationManager",
       "IAMPolicyManager",
-      "ObjectStorageFullAccess",
       "BillingManager",
     ]
   }
@@ -75,13 +89,23 @@ resource "scaleway_iam_policy" "train" {
 # The state bucket that `backend.tf` names. `infra/bootstrap` creates it,
 # with local state, before this stack's own first apply can run. This
 # resource only lets this stack read its ID, to scope the bucket policy
-# below to the pipeline and the operator application.
+# below to the named applications.
 data "scaleway_object_bucket" "state" {
   name = "stx-tofu-state"
 }
 
-# Only the pipeline and the operator application read or write the
-# state bucket: a bucket policy is an allow list, per the shared rule.
+# The checkout agent application: a documented console-made exception
+# (IAC-APPLY-5). It runs the plans and the delegated applies of this
+# stack today, so the bucket policy below must name it with write
+# access. An apply through this backend cuts its own key off from the
+# state bucket otherwise.
+data "scaleway_iam_application" "agent" {
+  name = "stx.prod.claude"
+}
+
+# Only the pipeline, the operator, and the agent application read or
+# write the state bucket: a bucket policy is an allow list, per the
+# shared rule.
 resource "scaleway_object_bucket_policy" "state" {
   bucket = data.scaleway_object_bucket.state.name
   policy = jsonencode({
@@ -95,6 +119,7 @@ resource "scaleway_object_bucket_policy" "state" {
           SCW = [
             "application_id:${scaleway_iam_application.pipeline.id}",
             "application_id:${scaleway_iam_application.operator.id}",
+            "application_id:${data.scaleway_iam_application.agent.id}",
           ]
         }
         Resource = [
@@ -144,8 +169,12 @@ resource "scaleway_object_bucket" "checkpoints" {
   tags          = local.common_tags
   force_destroy = false
 
+  # COR-BUCKETS-2 keeps versioning off on the checkpoint bucket: a
+  # checkpoint is large, and each version bills. The live bucket is
+  # suspended, not unversioned, because Object Storage never removes
+  # versioning once it starts.
   versioning {
-    enabled = true
+    enabled = false
   }
 
   lifecycle_rule {

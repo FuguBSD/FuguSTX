@@ -4,8 +4,7 @@ FuguSTX is an embeddable English linguistic analysis engine for prose linters,
 built as the pilot of FuguTTX. The engine turns raw English text into
 offset-faithful linguistic annotations. The build rehearses the FuguTTX
 production pipeline at small scale, on the same components, at real prices.
-Cheap learnings are a deliverable, and the [learning register](register.md)
-records them.
+Cheap learnings are a deliverable, and [the learning](LEARNING.md) records them.
 
 This document is the entry point of the specification. It holds the plan
 contract, the ID conventions, and the document tables.
@@ -16,7 +15,7 @@ contract, the ID conventions, and the document tables.
 - A plan must not go against a decision. To go against a decision, propose a
   change to [DECISIONS.md](DECISIONS.md) and get human approval first.
 - Take the next work from the [roadmap](ROADMAP.md). Each phase ends with a
-  measurement and a register entry.
+  measurement and a LEARNING entry.
 - A plan must cite each unit that it implements, for example
   `Implements: ENG-SCHEMA`.
 - A plan can exclude a rule from a cited unit with `without`, for example
@@ -51,8 +50,10 @@ unit, and the unit ID is the anchor in upper case:
 - Rule numbers only append: never renumber a rule, and never reuse a number.
 - An ID must not change. To retire a unit: delete its anchor and its register
   row, and add the ID to the "Retired IDs" table of [STATUS.md](STATUS.md).
-- Each document describes the target design in the current state only. Only
-  [ROADMAP.md](ROADMAP.md) and [STATUS.md](STATUS.md) say when work occurs.
+- Each design document describes the target design in the current state only.
+  [ROADMAP.md](ROADMAP.md), [STATUS.md](STATUS.md), and
+  [LEARNING.md](LEARNING.md) are records: only a record says when work occurs,
+  and only a record refers to an earlier state.
 - A citation of a unit of a sibling repository is a prose token with the
   repository name in front, for example FuguTTX TRN-SFT. It is never a link, and
   it never names a plan. Write the repository name before every cited ID, in
@@ -74,7 +75,7 @@ IDs of its units.
 | TRN  | [training.md](training.md)             | Training passes, the teacher campaign, and the compute budget  |
 | EVL  | [evaluation.md](evaluation.md)         | The evaluation tiers and the artifact suite                    |
 | IAC  | [infrastructure.md](infrastructure.md) | The applied shared infrastructure, the dev host, and the image |
-| REG  | [register.md](register.md)             | The learning register and the scope of its claims              |
+| LRN  | [LEARNING.md](LEARNING.md)             | The learning of each campaign, and the scope of its claims     |
 | LIC  | [licensing.md](licensing.md)           | Licenses, attribution, and release integrity                   |
 | RSK  | [risks.md](risks.md)                   | Risks and their mitigations                                    |
 
