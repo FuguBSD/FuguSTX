@@ -60,6 +60,12 @@ policy holds `BillingReadOnly`, so the forecast check must use the pipeline key.
 The agent policy takes the operator scope, so the denial marks drift. Confirm
 the agent policy rules at the next apply.
 
+A probe on 2026-08-28 tested the delegation path of the pipeline key. The
+workspace operator key created and deleted an api-key on `stx.prod.pipeline`.
+The gh session wrote and removed a repository secret and an environment on
+FuguBSD/FuguSTX. An agent with these credentials can therefore mint the pipeline
+key and store it, on human approval.
+
 ## A change to the stack
 
 ```sh
