@@ -16,7 +16,9 @@ no stack declares it.
 1. The `fugustx.prod` Scaleway Project, in the shared Organization.
 2. The compute quotas. Ask Scaleway Support for a quota of 1 for each compute
    offer that `infra/dev`, `infra/train`, and `infra/image` declare, in
-   `fr-par-2`. Record each granted quota here. No quota is granted today.
+   `fr-par-2`. Record each granted quota here. A live probe on 2026-08-25
+   created and deleted one H100-1-80G server, so that quota exists. Every other
+   quota stays unproven.
 3. The `stx.prod.claude` agent application, with its policy and its key. The
    policy takes the operator scope, per IAC-APPLY-7. Give the key a 7-day
    expiry, and hold it in one checkout only. The CI apply retires this
@@ -51,6 +53,12 @@ export AWS_SECRET_ACCESS_KEY="$SCW_SECRET_KEY"
 `SCW_DEFAULT_PROJECT_ID` must name the `fugustx.prod` Project. The
 `data "scaleway_account_project" "current"` source reads it, and every IAM
 policy scopes to it. A wrong value retargets the whole stack.
+
+A probe on 2026-08-25 tested the agent key. The key creates dev, train, and
+image resource types. The platform denies it the consumption read. The pipeline
+policy holds `BillingReadOnly`, so the forecast check must use the pipeline key.
+The agent policy takes the operator scope, so the denial marks drift. Confirm
+the agent policy rules at the next apply.
 
 ## A change to the stack
 

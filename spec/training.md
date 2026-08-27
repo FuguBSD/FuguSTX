@@ -12,8 +12,9 @@ FuguTTX TRN-INST.
 | H100-1-80G | 1× H100 PCIe | 80 GB | 2.73     | Default; hosts the teacher |
 | L40S-1-48G | 1× L40S      | 48 GB | 1.47     | Budget runs, no teacher    |
 
-Each price in this table is unverified, per the FuguTTX rule. Scaleway grants no
-H100 quota by default, so the quota request is a rehearsal.
+Each price in this table is unverified, per the FuguTTX rule. A quota grant is
+per Organization: probe each declared offer before a campaign, and record the
+result in the runbook.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
@@ -45,6 +46,8 @@ FuguTTX TRN-SFT.
   [accepted augmentation](corpus.md#cor-aug).
 - **TRN-SFT-2** — The format must be a token list in, and grammar-constrained
   labels out.
+- **TRN-SFT-3** — The treebank pairs must come from the train splits. The dev
+  split is a score input, and it must not enter a pair.
 
 <a id="trn-teach"></a>
 
