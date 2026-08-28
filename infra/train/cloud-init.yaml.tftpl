@@ -3,8 +3,14 @@
 # user_data is readable through the instance API. No distribution
 # upgrade runs here: a package upgrade on a GPU OS image breaks the
 # NVIDIA driver.
-ssh_authorized_keys:
-  - ${ssh_public_key}
+# The key must land on root: CI connects as root, and a top-level
+# ssh_authorized_keys targets the default user of the image, not root
+# (probed 2026-08-28, ten minutes of publickey denials).
+disable_root: false
+users:
+  - name: root
+    ssh_authorized_keys:
+      - ${ssh_public_key}
 package_update: true
 packages:
   - unzip
