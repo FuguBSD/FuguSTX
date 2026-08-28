@@ -1,0 +1,115 @@
+name: Tier T1
+
+# The gated tier T1 promotion sweep, on the CPU (EVL-TIERS-3). The
+# sweep runs on a manual dispatch, before a promotion. Twelve shards
+# split the eval lane, and the aggregate job writes the scorecard to
+# the artifacts bucket (EVL-TIERS-1).
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: The campaign run identifier of the artifact
+        required: true
+      name:
+        description: The promoted model name
+        type: choice
+        default: sft-base
+        options:
+          - sft-base
+          - sft-cpt
+
+concurrency:
+  group: tier-t1
+  cancel-in-progress: false
+
+env:
+  SHARDS: 12
+
+jobs:
+  shard:
+    name: Shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    environment: infra-apply
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    env:
+      SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: FuguBSD/Tooling/python/actions/setup-uv@main
+
+      - name: Install llama.cpp
+        run: |
+          . train/config.env
+          curl -sfL -o llama.tar.gz "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_VERSION/llama-$LLAMA_VERSION-bin-ubuntu-x64.tar.gz"
+          mkdir -p llama
+          tar -xzf llama.tar.gz -C llama
+          bin=$(dirname "$(find llama -name llama-cli -type f | head -1)")
+          echo "$PWD/$bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$PWD/$bin:$PWD/${bin%/bin}/lib" >> "$GITHUB_ENV"
+
+      - name: Fetch the model artifact
+        run: |
+          aws --endpoint-url https://s3.fr-par.scw.cloud s3 cp \
+            "s3://stx-artifacts/runs/${{ inputs.run_id }}/stx-${{ inputs.name }}.gguf" model.gguf
+
+      - name: Sweep the shard
+        run: |
+          . train/config.env
+          uv run --locked python -m stx_corpus.t1 \
+            --split eval \
+            --shard "${{ matrix.shard }}/$SHARDS" \
+            --stx "bin/stx label -m model.gguf -t 4" \
+            --model model.gguf \
+            --run-id "${{ inputs.run_id }}" \
+            --llama-version "$LLAMA_VERSION" \
+            --threads 4 \
+            --out "shard-${{ matrix.shard }}.json"
+
+      - name: Keep the shard scorecard
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: shard-${{ matrix.shard }}.json
+
+  aggregate:
+    name: Aggregate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: shard
+    environment: infra-apply
+    env:
+      SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: FuguBSD/Tooling/python/actions/setup-uv@main
+
+      - name: Collect the shard scorecards
+        uses: actions/download-artifact@v4
+        with:
+          path: shards
+          merge-multiple: true
+
+      - name: Aggregate and publish the scorecard
+        run: |
+          . train/config.env
+          uv run --locked python -m stx_corpus.t1 \
+            --run-id "${{ inputs.run_id }}" \
+            --llama-version "$LLAMA_VERSION" \
+            --aggregate shards/shard-*.json \
+            --upload

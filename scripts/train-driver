@@ -303,6 +303,10 @@ sub cmd_train (@argv)
 	kill 'TERM', $watcher;
 	waitpid $watcher, 0;
 	_sync_checkpoints($output_dir);
+
+	# The heartbeat stops with the run. The 20-minute idle window of
+	# the watchdog covers the gap to the next campaign step.
+	cmd_heartbeat('stop');
 	die "train-driver: the training run failed with status $status\n"
 	    if $status;
 	say "train: $config is done, checkpoints are in Object Storage";
@@ -381,6 +385,10 @@ sub cmd_serve (@argv)
 		my ( undef, $status ) =
 		    _run( 'curl', '-sf', 'http://127.0.0.1:8080/health' );
 		if ( $status == 0 ) {
+
+			# The dev scoring runs for a while: the heartbeat
+			# keeps the watchdog away until serve-stop.
+			cmd_heartbeat('start');
 			say 'serve: llama-server answers on 127.0.0.1:8080';
 			return 0;
 		}
@@ -392,6 +400,7 @@ sub cmd_serve (@argv)
 sub cmd_serve_stop ()
 {
 	_run( 'docker', 'rm', '-f', 'stx-llama' );
+	cmd_heartbeat('stop');
 
 	return 0;
 }
