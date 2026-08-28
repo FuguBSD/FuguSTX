@@ -1,0 +1,42 @@
+name: Watchdog
+
+# The idle watchdog, every 30 minutes, per the shared spend
+# guardrails. A scheduled GitHub workflow alone is best effort; the
+# stx:expires tag and the key expiry are the backstops.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+# The watchdog holds its own group: a running train job must not block
+# the stx:expires backstop for hours, and a queued campaign dispatch
+# must not lose its slot to a schedule. A destroy under a running apply
+# waits on the state lock, so the two groups stay safe.
+concurrency:
+  group: infra-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    name: Watchdog
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: infra-apply
+    env:
+      SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_DEFAULT_PROJECT_ID }}
+      SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          make deps
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Watchdog
+        run: make infra-watchdog

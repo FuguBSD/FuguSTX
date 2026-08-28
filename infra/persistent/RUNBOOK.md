@@ -17,8 +17,9 @@ no stack declares it.
 2. The compute quotas. Ask Scaleway Support for a quota of 1 for each compute
    offer that `infra/dev`, `infra/train`, and `infra/image` declare, in
    `fr-par-2`. Record each granted quota here. A live probe on 2026-08-25
-   created and deleted one H100-1-80G server, so that quota exists. Every other
-   quota stays unproven.
+   created and deleted one H100-1-80G server, so that quota exists. A live probe
+   on 2026-08-28 created and deleted one L40S-1-48G server, so that quota
+   exists. Every other quota stays unproven.
 3. The `stx.prod.claude` agent application, with its policy and its key. The
    policy takes the operator scope, per IAC-APPLY-7. Give the key a 7-day
    expiry, and hold it in one checkout only. The CI apply retires this
@@ -55,16 +56,43 @@ export AWS_SECRET_ACCESS_KEY="$SCW_SECRET_KEY"
 policy scopes to it. A wrong value retargets the whole stack.
 
 A probe on 2026-08-25 tested the agent key. The key creates dev, train, and
-image resource types. The platform denies it the consumption read. The pipeline
-policy holds `BillingReadOnly`, so the forecast check must use the pipeline key.
-The agent policy takes the operator scope, so the denial marks drift. Confirm
-the agent policy rules at the next apply.
+image resource types. The platform denied it the consumption read on that date.
+A probe on 2026-08-28 read the consumption with the same key, so the drift is
+closed. The console-made policy of the `stx.prod.claude` application carries the
+name `stx.prod.full`, and it holds `BillingManager` at organization scope.
 
 A probe on 2026-08-28 tested the delegation path of the pipeline key. The
 workspace operator key created and deleted an api-key on `stx.prod.pipeline`.
 The gh session wrote and removed a repository secret and an environment on
 FuguBSD/FuguSTX. An agent with these credentials can therefore mint the pipeline
 key and store it, on human approval.
+
+## The campaign credentials, set 2026-08-28
+
+The pipeline key `SCWA09NTBHDBCBNASZAQ` exists on `stx.prod.pipeline`. It
+expires 2026-11-26. Its `default-project-id` names `fugustx.prod`: the platform
+defaults a new key to the organization default project, and the Object Storage
+calls of the key then target the wrong project. Pass `default-project-id` on
+each `scw iam api-key create`.
+
+The FuguBSD/FuguSTX repository holds the CI secrets `SCW_ACCESS_KEY`,
+`SCW_SECRET_KEY`, and `STX_TRAIN_SSH_KEY`, and the variables
+`SCW_DEFAULT_PROJECT_ID` and `SCW_DEFAULT_ORGANIZATION_ID`. The campaign SSH key
+is an ed25519 pair with the fingerprint
+`SHA256:3ZFZ5Zdzq51On4VmSX/IF2y0bY1I1ESx6HwxWjK25gI`. Cloud-init writes its
+public half to the train instance; only the CI secret holds the private half.
+
+Two human steps stay open:
+
+1. Apply this stack: the pipeline policy change adds `IAMApplicationManager`, so
+   the CI up job can mint the train key. A probe on 2026-08-28 proved the
+   permission set covers api-key create and delete.
+2. Create the `infra-apply` environment with a main-only deployment branch
+   policy, and move the three secrets and the two variables into it. Until then,
+   the repository scope serves the same workflows.
+
+The price table of [training.md](../../spec/training.md#trn-inst) holds the
+2026-08-28 price read.
 
 ## A change to the stack
 

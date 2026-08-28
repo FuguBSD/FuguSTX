@@ -9,12 +9,13 @@ FuguTTX TRN-INST.
 
 | Instance   | GPU          | VRAM  | EUR/hour | Role                       |
 | ---------- | ------------ | ----- | -------- | -------------------------- |
-| H100-1-80G | 1× H100 PCIe | 80 GB | 2.73     | Default; hosts the teacher |
-| L40S-1-48G | 1× L40S      | 48 GB | 1.47     | Budget runs, no teacher    |
+| H100-1-80G | 1× H100 PCIe | 80 GB | 2.8665   | Default; hosts the teacher |
+| L40S-1-48G | 1× L40S      | 48 GB | 1.4699   | Budget runs, no teacher    |
 
-Each price in this table is unverified, per the FuguTTX rule. A quota grant is
-per Organization: probe each declared offer before a campaign, and record the
-result in the runbook.
+The 2026-08-28 price read fills this table, and a table price goes stale: only
+the pre-apply read of TRN-INST-1 counts. A quota grant is per Organization:
+probe each declared offer before a campaign, and record the result in the
+runbook.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
@@ -26,7 +27,10 @@ result in the runbook.
 ## The CPT rehearsal
 
 The pass exists to rehearse `make train-cpt` end to end ([T4](DECISIONS.md#t4)).
-Rehearses: FuguTTX TRN-CPT.
+The dev-split comparison of TRN-CPT-2 can run on the train instance GPU, and its
+scorecard records the device. Decision [T2](DECISIONS.md#t2) binds the shipped
+engine and the tier T1 gate, and both stay on the CPU. Rehearses: FuguTTX
+TRN-CPT.
 
 - **TRN-CPT-1** — The CPT rehearsal must run one epoch, at a low learning rate,
   on [the prose lane](corpus.md#cor-lanes).
@@ -92,14 +96,15 @@ FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
 
 ## The compute budget
 
-The estimates are order-of-magnitude, at the unverified H100 price of EUR 2.73
-per hour. Scaleway documents a minimum of 60 minutes per created resource.
+The estimates are order-of-magnitude, at the H100 price of EUR 2.87 per hour,
+read 2026-08-28. Scaleway documents a minimum of 60 minutes per created
+resource.
 
 | Item                               | GPU-hours | EUR per run |
 | ---------------------------------- | --------- | ----------- |
 | SFT pass (0.6B, QLoRA)             | 1–2       | 3–6         |
 | CPT rehearsal pass                 | 1–2       | 3–6         |
-| Teacher campaign (Qwen3-32B, vLLM) | 5–15      | 14–41       |
+| Teacher campaign (Qwen3-32B, vLLM) | 5–15      | 14–43       |
 | Artifact suite sweep (dev host)    | —         | 1–3         |
 
 The last row prices [the artifact suite](evaluation.md#evl-suite) sweep on

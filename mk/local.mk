@@ -2,6 +2,10 @@
 # FuguBSD/Tooling does not own this one: it holds rules specific to
 # FuguSTX, until a shared pack picks up the pattern.
 #
+# TEST_GLOBS: the org fragment covers t/ci/*.t. This repository also
+# holds harness and infra tests directly under t/.
+TEST_GLOBS = t/*.t t/ci/*.t
+
 # test-py: the python pack's mk/python.mk defines no test-py target,
 # because `uv run pytest` fails on an empty tree (packages/CLAUDE.md).
 # packages/stx-corpus/tests now exists, so this repository adds its own.
@@ -44,4 +48,59 @@ infra-check: infra-fmt-check
 infra-bootstrap:
 	cd infra/bootstrap && $(TOFU) init -input=false && $(TOFU) apply
 
+# The task runner of the shared instructions. scripts/infra holds the
+# logic: the live price read and the forecast check before an apply
+# (TRN-INST-1, TRN-BUDGET-1), the bucket versioning check of
+# infra-status (COR-BUCKETS-2), and the watchdog decisions. The train
+# options: TRAIN_OFFER selects the offer, and TRAIN_HOURS sets the
+# lease.
+INFRA        = scripts/infra
+TRAIN_OFFER ?= H100-1-80G
+TRAIN_HOURS ?= 4
+
+# The single quotes keep a variable value out of shell syntax: the
+# hours value arrives from a workflow input.
+infra-plan:
+	@test -n "$(STACK)" || { echo "usage: make infra-plan STACK=<name>"; exit 1; }
+	$(INFRA) plan $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
+
+infra-plan-ro:
+	@test -n "$(STACK)" || { echo "usage: make infra-plan-ro STACK=<name>"; exit 1; }
+	$(INFRA) plan-ro $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
+
+infra-up:
+	@test -n "$(STACK)" || { echo "usage: make infra-up STACK=<name>"; exit 1; }
+	$(INFRA) up $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
+
+infra-down:
+	@test -n "$(STACK)" || { echo "usage: make infra-down STACK=<name>"; exit 1; }
+	$(INFRA) down $(STACK)
+
+infra-price:
+	@test -n "$(STACK)" || { echo "usage: make infra-price STACK=<name>"; exit 1; }
+	$(INFRA) price $(STACK) --offer '$(TRAIN_OFFER)'
+
+infra-status:
+	$(INFRA) status
+
+infra-cost:
+	$(INFRA) cost
+
+infra-watchdog:
+	$(INFRA) watchdog
+
 .PHONY: infra-fmt-check infra-validate infra-check infra-bootstrap
+.PHONY: infra-plan infra-plan-ro infra-up infra-down infra-price
+.PHONY: infra-status infra-cost infra-watchdog
+
+# The training runs (TRN-EXEC-3), against a provisioned instance.
+# SFT_FROM selects the SFT start point: base, or cpt (decision T4).
+SFT_FROM ?= base
+
+train-cpt:
+	scripts/train cpt
+
+train-sft:
+	scripts/train sft-$(SFT_FROM)
+
+.PHONY: train-cpt train-sft

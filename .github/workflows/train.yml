@@ -1,0 +1,126 @@
+name: Train
+
+# The campaign jobs of the train stack: stack up, the training and
+# scoring steps, and stack down. Each run is a manual dispatch under
+# the infra-apply environment, with the pipeline credential. The
+# operator network resets SSH, so CI runs the SSH steps, per the
+# LEARNING entries.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: The campaign step
+        type: choice
+        required: true
+        options:
+          - up
+          - cpt
+          - merge-cpt
+          - sft-base
+          - sft-cpt
+          - gguf
+          - score
+          - promote
+          - down
+      offer:
+        description: The instance offer (decision T3)
+        type: choice
+        default: H100-1-80G
+        options:
+          - H100-1-80G
+          - L40S-1-48G
+      hours:
+        description: The lease, in hours, for the stx:expires tag
+        default: "4"
+      name:
+        description: The model name for gguf, score, and promote
+        type: choice
+        default: sft-base
+        options:
+          - sft-base
+          - sft-cpt
+
+# One concurrency group serializes each train stack change. A
+# cancelled apply can orphan a billed resource.
+concurrency:
+  group: infra-train
+  cancel-in-progress: false
+
+jobs:
+  train:
+    name: ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    environment: infra-apply
+    env:
+      SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_DEFAULT_PROJECT_ID }}
+      SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      STX_SSH_KEY_FILE: /home/runner/.ssh/stx-train
+      # A free-text input reaches the shell through the environment,
+      # never through an inline expression.
+      TRAIN_HOURS_INPUT: ${{ inputs.hours }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          make deps
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check the hours input
+        run: |
+          case "$TRAIN_HOURS_INPUT" in
+            ''|*[!0-9.]*) echo "the hours input must be a number"; exit 1;;
+          esac
+
+      - name: Write the campaign SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.STX_TRAIN_SSH_KEY }}" > "$STX_SSH_KEY_FILE"
+          chmod 600 "$STX_SSH_KEY_FILE"
+          echo "STX_SSH_PUBLIC_KEY=$(ssh-keygen -y -f "$STX_SSH_KEY_FILE")" >> "$GITHUB_ENV"
+
+      - name: Stack up
+        if: inputs.action == 'up'
+        run: |
+          make infra-up STACK=train TRAIN_OFFER='${{ inputs.offer }}' TRAIN_HOURS="$TRAIN_HOURS_INPUT"
+
+      - name: CPT rehearsal
+        if: inputs.action == 'cpt'
+        run: make train-cpt
+
+      - name: Merge the CPT adapter
+        if: inputs.action == 'merge-cpt'
+        run: scripts/train merge-cpt
+
+      - name: SFT from the base model
+        if: inputs.action == 'sft-base'
+        run: make train-sft SFT_FROM=base
+
+      - name: SFT from the CPT output
+        if: inputs.action == 'sft-cpt'
+        run: make train-sft SFT_FROM=cpt
+
+      - name: Merge and convert to GGUF
+        if: inputs.action == 'gguf'
+        run: scripts/train gguf --name ${{ inputs.name }}
+
+      # The dev split only: the eval lane stays in the gated CPU sweep
+      # of tier T1 (EVL-TIERS-3).
+      - name: Score the dev split
+        if: inputs.action == 'score'
+        run: |
+          scripts/train score --name '${{ inputs.name }}'
+
+      - name: Promote the artifact
+        if: inputs.action == 'promote'
+        run: scripts/train promote --name ${{ inputs.name }}
+
+      - name: Stack down
+        if: inputs.action == 'down'
+        run: make infra-down STACK=train

@@ -24,10 +24,15 @@ resource "scaleway_iam_application" "train" {
 
 # The pipeline policy must not hold IAMManager, OrganizationManager, or
 # ProjectManager. A rule holds permission sets of one scope type only,
-# so the org-scoped billing read gets its own rule.
+# so the org-scoped sets get their own rule. IAMApplicationManager is
+# there for one flow: at `make infra-up STACK=train`, CI mints the
+# train key on the train application, and at down it deletes the key,
+# per the shared train-credential rule. A probe on 2026-08-28 proved
+# that the set covers api-key create and delete. IAC-APPLY-6 accepts
+# the organization scope, because Scaleway offers no narrower one.
 resource "scaleway_iam_policy" "pipeline" {
   name           = "stx.prod.pipeline"
-  description    = "Compute and Object Storage in this project, and billing read."
+  description    = "Compute and Object Storage in this project, billing read, and the train key mint."
   application_id = scaleway_iam_application.pipeline.id
 
   rule {
@@ -40,8 +45,11 @@ resource "scaleway_iam_policy" "pipeline" {
   }
 
   rule {
-    organization_id      = scaleway_iam_application.pipeline.organization_id
-    permission_set_names = ["BillingReadOnly"]
+    organization_id = scaleway_iam_application.pipeline.organization_id
+    permission_set_names = [
+      "BillingReadOnly",
+      "IAMApplicationManager",
+    ]
   }
 }
 

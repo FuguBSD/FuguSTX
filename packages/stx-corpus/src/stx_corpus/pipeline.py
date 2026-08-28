@@ -2,8 +2,8 @@
 
 Implements corpus.md COR-LANES, COR-SOURCES, and COR-CONLLU end to end.
 
-The corpus buckets of COR-BUCKETS exist. This module writes to a local
-directory, and a later phase adds the upload to `stx-corpus`.
+This module writes to a local directory. `upload.py` writes the same
+lanes to the corpus buckets of COR-BUCKETS.
 """
 
 from __future__ import annotations

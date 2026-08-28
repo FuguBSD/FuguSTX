@@ -1,7 +1,7 @@
 # 003 — The first SFT campaign and the tier T1 baseline
 
-- Implements: TRN-INST, TRN-CPT, TRN-SFT, TRN-EXEC, TRN-BUDGET, ENG-SCHEMA
-- Implements: COR-BUCKETS, IAC-APPLY, EVL-TIERS without EVL-TIERS-4
+- Implements: TRN-INST, TRN-CPT, TRN-SFT, TRN-EXEC
+- Implements: IAC-APPLY, EVL-TIERS without EVL-TIERS-4
 - Implements: ENG-SPLIT without ENG-SPLIT-1 without ENG-SPLIT-2
 - Implements: LRN-DELIVER without LRN-DELIVER-2 without LRN-DELIVER-3
 
@@ -15,23 +15,11 @@ can land now. No decision blocks this plan. Decisions
 [T4](../../spec/DECISIONS.md#t4), [T6](../../spec/DECISIONS.md#t6), and
 [T7](../../spec/DECISIONS.md#t7) shape it.
 
-Two prerequisites wait on a human, before the first campaign:
-
-- A human creates a key on the pipeline application, and sets it in the CI
-  secrets, per [the shared credentials](../../infra/CLAUDE.md#credentials). The
-  CI jobs of this plan use that key.
-- A human records the quota of each declared offer in
-  [the runbook](../../infra/persistent/RUNBOOK.md), per
-  [the shared quota rule](../../infra/CLAUDE.md#spend-guardrails). A live probe
-  on 2026-08-25 created an H100-1-80G server, so that quota exists. The
-  L40S-1-48G quota is unproven: probe it, and record the result.
-
-The persistent stack grants `BillingReadOnly` to the pipeline policy, so the
-forecast check reads consumption with the pipeline key. The agent key holds no
-billing read: a probe on 2026-08-25 confirmed the denial. The first campaign
-must confirm the pipeline read with one probe, per
-[the shared verification rules](../../infra/CLAUDE.md#verification). The runbook
-records the two 2026-08-25 probes.
+The prerequisites are done. The pipeline key sits in the CI secrets. Both
+declared offers hold a probed quota, and the billing reads passed with both
+keys. [The runbook](../../infra/persistent/RUNBOOK.md) records each one, and it
+names two open human steps: the persistent apply of the pipeline-policy change,
+and the infra-apply branch policy. Both steps gate the first campaign dispatch.
 
 LRN-DELIVER-2 and LRN-DELIVER-3 change the FuguTTX repository. This plan
 excludes both: a FuguTTX plan lands each change.

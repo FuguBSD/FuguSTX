@@ -1,0 +1,35 @@
+# The CPT rehearsal (TRN-CPT-1): one epoch, at a low learning rate, on
+# the prose lane. The pass exists to rehearse `make train-cpt` end to
+# end (decision T4). When the pass does not move the dev scores, the
+# product drops it (TRN-CPT-2).
+base_model: Qwen/Qwen3-0.6B-Base
+
+load_in_4bit: true
+adapter: qlora
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_linear: true
+
+datasets:
+  - path: /scratch/corpus/prose.jsonl
+    type: completion
+dataset_prepared_path: /scratch/prepared/cpt
+output_dir: /scratch/outputs/cpt
+
+sequence_len: 2048
+sample_packing: true
+micro_batch_size: 8
+gradient_accumulation_steps: 2
+
+num_epochs: 1
+learning_rate: 0.00002
+lr_scheduler: cosine
+warmup_ratio: 0.05
+optimizer: adamw_torch
+
+bf16: true
+tf32: true
+gradient_checkpointing: true
+logging_steps: 10
+saves_per_epoch: 1

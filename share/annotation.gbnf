@@ -1,0 +1,46 @@
+# The annotation schema and its llama.cpp GBNF grammar (ENG-SCHEMA-1,
+# ENG-SCHEMA-2). This file is the one source of the model serialization.
+# The pairs builder, the tier T1 sweep, and the future engine read it.
+#
+# The input serialization: one line for each token, with the 1-based
+# token index, one tab, and the token form. One empty line ends the
+# token list, and the model output starts after it.
+#
+# The output serialization: one record line for each token, in token
+# order. A record holds five tab-separated fields: UPOS, lemma, head,
+# deprel, and feats. The head field holds the 1-based index of the head
+# token, or 0 for the root. The feats field holds "_", or Name=Value
+# pairs joined with "|". The record count must equal the token count,
+# and the harness rejects an output where the counts differ.
+#
+# The schema holds no offset field, so the model can not produce an
+# offset (ENG-SPLIT-3). The harness computes every offset.
+
+root ::= record+
+record ::= upos "\t" lemma "\t" head "\t" deprel "\t" feats "\n"
+
+# The 17 UPOS tags of the Universal Dependencies inventory.
+upos ::= "ADJ" | "ADP" | "ADV" | "AUX" | "CCONJ" | "DET" | "INTJ" | "NOUN" | "NUM" | "PART" | "PRON" | "PROPN" | "PUNCT" | "SCONJ" | "SYM" | "VERB" | "X"
+
+# A lemma is one or more characters, without a tab and without a
+# newline. A lemma of "_" stands for an absent lemma (COR-CONLLU-5
+# covers the form column only; the lemma column keeps the convention).
+lemma ::= [^\t\n]+
+
+# The head index: 0 for the root, else a 1-based index up to 999.
+head ::= "0" | [1-9] [0-9]? [0-9]?
+
+# The 37 universal dependency relations, with an optional language
+# subtype, for example nmod:poss.
+deprel ::= rel (":" subtype)?
+subtype ::= [a-z]+
+rel ::= "acl" | "advcl" | "advmod" | "amod" | "appos" | "aux" | "case" | "cc" | "ccomp" | "clf" | "compound" | "conj" | "cop" | "csubj" | "dep" | "det" | "discourse" | "dislocated" | "expl" | "fixed" | "flat" | "goeswith" | "iobj" | "list" | "mark" | "nmod" | "nsubj" | "nummod" | "obj" | "obl" | "orphan" | "parataxis" | "punct" | "reparandum" | "root" | "vocative" | "xcomp"
+
+# The morphological features: "_" for none, else Name=Value pairs
+# joined with "|". A name can carry a layer suffix in brackets, for
+# example Number[psor]. A value can hold a comma-joined list.
+feats ::= "_" | feat ("|" feat)*
+feat ::= fname "=" fvalue
+fname ::= [A-Za-z] [A-Za-z0-9]* ("[" [a-z]+ "]")?
+fvalue ::= fatom ("," fatom)*
+fatom ::= [A-Za-z0-9.]+

@@ -1,0 +1,215 @@
+#!/usr/bin/env perl
+# ex:ts=8 sw=4:
+# $OpenBSD$
+#
+# Copyright (c) 2026 Dick Olsson <hi@senzilla.io>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# train: drive a campaign step against the provisioned train instance.
+#
+# usage: train cpt
+#        train merge-cpt
+#        train sft-base | train sft-cpt
+#        train gguf --name sft-base|sft-cpt
+#        train score --name NAME
+#        train promote --name NAME
+#
+# Each verb copies the tracked repository files to the instance, and
+# it runs the matching scripts/train-driver step there over SSH
+# (TRN-EXEC-3). The operator network resets SSH, so CI runs these
+# verbs, per the LEARNING entries. The instance address comes from the
+# train stack output. STX_SSH_KEY_FILE names the campaign SSH key.
+#
+# Like scripts/deps, core modules only, and v5.34.
+
+use v5.34;
+use warnings;
+use experimental 'signatures';
+
+use File::Basename qw(dirname);
+use File::Spec     ();
+use Getopt::Long   qw(GetOptionsFromArray);
+
+my $USAGE = <<'EOF';
+usage: train cpt
+       train merge-cpt
+       train sft-base | train sft-cpt
+       train gguf --name sft-base|sft-cpt
+       train score --name NAME
+       train promote --name NAME
+EOF
+
+my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+
+# _ip():
+#	The instance address, from the train stack output. A fresh CI
+#	runner holds no initialized backend, so the read inits first.
+sub _ip ()
+{
+	system( 'tofu', "-chdir=$ROOT/infra/train", 'init', '-input=false' )
+	    == 0
+	    or die "train: tofu init failed for the train stack\n";
+	my $pid = open my $fh, '-|',
+	    'tofu', "-chdir=$ROOT/infra/train", 'output', '-raw', 'public_ip'
+	    or die "train: run tofu: $!\n";
+	my $ip = <$fh> // '';
+	close $fh;
+	chomp $ip;
+	die "train: no train stack output; run make infra-up STACK=train\n"
+	    if $? || $ip !~ /^[0-9a-f.:]+\z/;
+
+	return $ip;
+}
+
+# _ssh_argv($ip):
+#	The ssh argument list of the train instance.
+sub _ssh_argv ($ip)
+{
+	my @argv = (
+		'ssh',
+		'-o', 'BatchMode=yes',
+		'-o', 'StrictHostKeyChecking=accept-new',
+	);
+	push @argv, '-i', $ENV{STX_SSH_KEY_FILE} if $ENV{STX_SSH_KEY_FILE};
+
+	return ( @argv, "root\@$ip" );
+}
+
+# _push($ip):
+#	Copy the tracked repository files to /scratch/stx, through a
+#	tar pipe: rsync is not part of the GPU OS image.
+sub _push ($ip)
+{
+	my @ssh = _ssh_argv($ip);
+	my $tar = "cd \Q$ROOT\E && git ls-files -z | tar --null -T - -czf -";
+	my $out = "mkdir -p /scratch/stx && tar -C /scratch/stx -xzf -";
+	system("$tar | @ssh \Q$out\E") == 0
+	    or die "train: the repository push to $ip failed\n";
+	say "train: the repository is on $ip:/scratch/stx";
+
+	return;
+}
+
+# _remote($ip, $command):
+#	One driver step on the instance, with the train environment and
+#	the campaign pins of train/config.env.
+sub _remote ( $ip, $command )
+{
+	my @ssh = _ssh_argv($ip);
+	my $wrapped =
+	    'cd /scratch/stx && set -a && . /root/stx-train.env && '
+	    . ". train/config.env && set +a && $command";
+	system( @ssh, $wrapped ) == 0
+	    or die "train: the remote step failed: $command\n";
+
+	return;
+}
+
+# _uv():
+#	The uv install line of the score step. The instance image has
+#	no uv; the score step needs the Python scorer.
+sub _uv ()
+{
+	return 'export PATH=$HOME/.local/bin:$PATH; '
+	    . 'command -v uv >/dev/null 2>&1 || '
+	    . '{ curl -LsSf https://astral.sh/uv/install.sh | sh; }';
+}
+
+# main(@argv):
+#	The verb dispatcher.
+sub main (@argv)
+{
+	my $verb = shift @argv // die $USAGE;
+	my $name;
+	GetOptionsFromArray( \@argv, 'name=s' => \$name ) or die $USAGE;
+
+	my $ip = _ip();
+	_push($ip);
+
+	if ( $verb eq 'cpt' ) {
+		_remote( $ip,
+			      'scripts/train-driver sync-corpus && '
+			    . 'scripts/train-driver train --config train/cpt.yml'
+		);
+		return 0;
+	}
+	if ( $verb eq 'merge-cpt' ) {
+		_remote( $ip,
+			      'scripts/train-driver merge --config train/cpt.yml '
+			    . '--lora /scratch/outputs/cpt '
+			    . '--output /scratch/outputs/cpt-merged' );
+		return 0;
+	}
+	if ( $verb eq 'sft-base' || $verb eq 'sft-cpt' ) {
+		_remote( $ip,
+			      'scripts/train-driver sync-corpus && '
+			    . "scripts/train-driver train --config train/$verb.yml"
+		);
+		return 0;
+	}
+	if ( $verb eq 'gguf' ) {
+		die $USAGE unless defined $name;
+		_remote( $ip,
+			      "scripts/train-driver merge --config train/$name.yml "
+			    . "--lora /scratch/outputs/$name "
+			    . "--output /scratch/outputs/$name-merged && "
+			    . 'mkdir -p /scratch/gguf && '
+			    . 'scripts/train-driver gguf '
+			    . "--input /scratch/outputs/$name-merged "
+			    . "--output /scratch/gguf/$name.gguf" );
+		return 0;
+	}
+	if ( $verb eq 'score' ) {
+		die $USAGE unless defined $name;
+
+		# The dev split only: the synced training.jsonl holds it,
+		# and the eval lane stays in the gated CPU sweep of tier
+		# T1. The server runs on the GPU, because the instance
+		# bills per minute; decision T2 binds the shipped engine
+		# and the tier T1 gate, and both stay on the CPU. The
+		# scorecard records the device.
+		_remote( $ip,
+			      "scripts/train-driver serve --model /scratch/gguf/$name.gguf && "
+			    . _uv() . ' && '
+			    . 'mkdir -p /scratch/scorecards && '
+			    . 'uv run --locked python -m stx_corpus.t1 '
+			    . '--split dev '
+			    . '--records /scratch/corpus/training.jsonl '
+			    . q{--stx 'bin/stx label --server http://127.0.0.1:8080' }
+			    . "--model /scratch/gguf/$name.gguf "
+			    . "--label $name --device gpu "
+			    . '--run-id "$STX_RUN_ID" '
+			    . '--llama-version "$LLAMA_VERSION" '
+			    . "--out /scratch/scorecards/$name-dev.json "
+			    . '--upload; '
+			    . 'status=$?; scripts/train-driver serve-stop; '
+			    . 'exit $status' );
+		return 0;
+	}
+	if ( $verb eq 'promote' ) {
+		die $USAGE unless defined $name;
+
+		# Step 10: the chosen artifact and its hash land in the
+		# artifacts bucket.
+		_remote( $ip,
+			      "sha256sum /scratch/gguf/$name.gguf && "
+			    . 'scripts/train-driver put '
+			    . "--file /scratch/gguf/$name.gguf "
+			    . '--key "runs/$STX_RUN_ID/stx-' . $name . '.gguf"' );
+		return 0;
+	}
+	die $USAGE;
+}
+
+exit main(@ARGV) unless caller;

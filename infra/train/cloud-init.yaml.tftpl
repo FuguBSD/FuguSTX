@@ -1,0 +1,31 @@
+#cloud-config
+# The train instance boot configuration. No credential lives here:
+# user_data is readable through the instance API. No distribution
+# upgrade runs here: a package upgrade on a GPU OS image breaks the
+# NVIDIA driver.
+ssh_authorized_keys:
+  - ${ssh_public_key}
+package_update: true
+packages:
+  - unzip
+runcmd:
+  # Format and mount the scratch NVMe. The root volume is SBS (sda),
+  # so the bare NVMe disk without a file system is the scratch volume.
+  - |
+    for disk in /dev/nvme0n1 /dev/nvme1n1; do
+      [ -b "$disk" ] || continue
+      blkid "$disk" >/dev/null && continue
+      mkfs.ext4 -F "$disk"
+      mkdir -p /scratch
+      mount "$disk" /scratch
+      break
+    done
+  # The S3 client. Ubuntu Noble ships no awscli package, so the AWS
+  # bundled installer supplies it (probed 2026-08-28).
+  - |
+    curl -sf https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    /tmp/aws/install
+  # Pull the training image while CI waits for SSH, so the pull and
+  # the corpus sync overlap.
+  - nohup docker pull ${axolotl_image} >/var/log/stx-pull.log 2>&1 &
