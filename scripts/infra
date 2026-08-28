@@ -1,0 +1,735 @@
+#!/usr/bin/env perl
+# ex:ts=8 sw=4:
+# $OpenBSD$
+#
+# Copyright (c) 2026 Dick Olsson <hi@senzilla.io>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# infra: the task runner of the shared infrastructure instructions.
+#
+# usage: infra price [--offer NAME]
+#        infra forecast --price EUR --hours N [--budget EUR]
+#        infra cost
+#        infra status
+#        infra watchdog
+#        infra plan STACK [options]
+#        infra plan-ro STACK [options]
+#        infra up STACK [--offer NAME] [--hours N] [--run-id ID]
+#        infra down STACK
+#
+# The mk/local.mk infra-* targets call this script. The credentials
+# come from the environment (SCW_ACCESS_KEY, SCW_SECRET_KEY,
+# SCW_DEFAULT_PROJECT_ID, SCW_DEFAULT_ORGANIZATION_ID), per the shared
+# credential rules. The tests put stub scw, curl, tofu, and ssh
+# commands on the PATH.
+#
+# Like scripts/deps, core modules only, and v5.34 for macOS.
+
+use v5.34;
+use warnings;
+use experimental 'signatures';
+
+use File::Basename qw(dirname);
+use File::Spec     ();
+use Getopt::Long   qw(GetOptionsFromArray);
+use JSON::PP       ();
+use Time::Local    qw(timegm);
+
+my $USAGE = <<'EOF';
+usage: infra price [--offer NAME]
+       infra forecast --price EUR --hours N [--budget EUR]
+       infra cost
+       infra status
+       infra watchdog
+       infra plan STACK [options]
+       infra plan-ro STACK [options]
+       infra up STACK [--offer NAME] [--hours N] [--run-id ID]
+       infra down STACK
+EOF
+
+my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+
+my $ZONE     = 'fr-par-2';
+my $REGION   = 'fr-par';
+my $ENDPOINT = 's3.fr-par.scw.cloud';
+
+# IAC-APPLY-3: EUR 300 per month. Only a human raises it.
+my $BUDGET_EUR = 300;
+
+# The shared idle definition: 20 minutes for the server age and for
+# the heartbeat age. The consumption read is stale after 6 hours.
+my $IDLE_MINUTES  = 20;
+my $STALE_HOURS   = 6;
+my $DEFAULT_OFFER = 'H100-1-80G';
+
+# COR-BUCKETS-2: the versioning of each bucket. 1 is on, 0 is off.
+my %VERSIONING = (
+	'stx-corpus'      => 1,
+	'stx-evalcorpus'  => 1,
+	'stx-checkpoints' => 0,
+	'stx-artifacts'   => 1,
+);
+
+my %STACKS = map { $_ => 1 } qw(bootstrap persistent dev train image);
+
+my $json = JSON::PP->new;
+
+# _run(@argv):
+#	Run one command without a shell. Return the standard output and
+#	the exit status. The caller trusts the exit status, never the
+#	output shape, per the shared verification rules.
+sub _run (@argv)
+{
+	my $pid = open my $fh, '-|', @argv
+	    or die "infra: run $argv[0]: $!\n";
+	local $/ = undef;
+	my $output = <$fh>;
+	close $fh;
+
+	return ( $output // '', $? >> 8 );
+}
+
+# _run_or_die(@argv):
+#	Like _run, and a failure dies with the command name.
+sub _run_or_die (@argv)
+{
+	my ( $output, $status ) = _run(@argv);
+	die "infra: '@argv[0..1]' failed with status $status\n" if $status;
+
+	return $output;
+}
+
+# _scw(@args):
+#	One Scaleway CLI call with JSON output.
+sub _scw (@args)
+{
+	return $json->decode( _run_or_die( 'scw', @args, '-o', 'json' ) );
+}
+
+# _money($value):
+#	An amount of the Scaleway money shape: units plus nanos.
+sub _money ($value)
+{
+	return 0 unless ref $value eq 'HASH';
+
+	return ( $value->{units} // 0 ) + ( $value->{nanos} // 0 ) / 1e9;
+}
+
+# _epoch($stamp):
+#	The epoch of one RFC 3339 stamp, in UTC. Scaleway writes Z or a
+#	+00:00 offset.
+sub _epoch ($stamp)
+{
+	return undef
+	    unless defined $stamp
+	    && $stamp =~ /^(\d{4})-(\d{2})-(\d{2})[T ]
+			  (\d{2}):(\d{2}):(\d{2})(?:\.\d+)?
+			  (?:Z|\+00:00)\z/x;
+
+	return timegm( $6, $5, $4, $3, $2 - 1, $1 );
+}
+
+# _rfc3339($epoch):
+#	The UTC RFC 3339 stamp of one epoch.
+sub _rfc3339 ($epoch)
+{
+	my ( $sec, $min, $hour, $mday, $mon, $year ) = gmtime $epoch;
+
+	return sprintf '%04d-%02d-%02dT%02d:%02d:%02dZ',
+	    $year + 1900, $mon + 1, $mday, $hour, $min, $sec;
+}
+
+# _epoch_http($stamp):
+#	The epoch of one HTTP date, as a Last-Modified header holds it.
+sub _epoch_http ($stamp)
+{
+	my %months = (
+		Jan => 0, Feb => 1, Mar => 2,  Apr => 3, May => 4,  Jun => 5,
+		Jul => 6, Aug => 7, Sep => 8,  Oct => 9, Nov => 10, Dec => 11,
+	);
+	return undef
+	    unless defined $stamp
+	    && $stamp =~ /^\w{3},\s+(\d{1,2})\s+(\w{3})\s+(\d{4})\s+
+			  (\d{2}):(\d{2}):(\d{2})\s+GMT/x
+	    && exists $months{$2};
+
+	return timegm( $6, $5, $4, $1, $months{$2}, $3 );
+}
+
+# _tags($list):
+#	The tag list of one resource, as a hash.
+sub _tags ($list)
+{
+	return { map { ( split /=/, $_, 2 )[ 0, 1 ] } @{ $list // [] } };
+}
+
+# _config():
+#	The campaign pins and shared names of train/config.env.
+sub _config ()
+{
+	my %config;
+	open my $fh, '<', "$ROOT/train/config.env"
+	    or die "infra: read train/config.env: $!\n";
+	while ( my $line = <$fh> ) {
+		chomp $line;
+		next if $line =~ /^\s*(?:#|\z)/;
+		my ( $key, $value ) = split /=/, $line, 2;
+		$config{$key} = $value;
+	}
+	close $fh;
+
+	return \%config;
+}
+
+# _curl_s3($method, $url):
+#	One SigV4 call against Object Storage, with curl. Return the
+#	HTTP status and the body or the headers.
+sub _curl_s3 ($method, $url)
+{
+	my @argv = (
+		'curl', '-s', '--aws-sigv4', "aws:amz:$REGION:s3",
+		'--user', "$ENV{SCW_ACCESS_KEY}:$ENV{SCW_SECRET_KEY}",
+	);
+	push @argv, '-I' if $method eq 'HEAD';
+	my ( $output, $status ) = _run( @argv, $url );
+	die "infra: curl $url failed with status $status\n" if $status;
+	my ($code) =
+	    $method eq 'HEAD'
+	    ? $output =~ m{^HTTP/[0-9.]+\s+(\d{3})}
+	    : (200);
+
+	return ( $code // 0, $output );
+}
+
+# _price($offer):
+#	The live hourly price of one offer (TRN-INST-1).
+sub _price ($offer)
+{
+	my $types = _scw(qw(instance server-type list), "zone=$ZONE");
+	for my $type (@$types) {
+		next unless $type->{name} eq $offer;
+		my $price = _money( $type->{hourly_price} );
+		die "infra: no live price for $offer\n" unless $price > 0;
+		return $price;
+	}
+	die "infra: unknown offer in $ZONE: $offer\n";
+}
+
+sub cmd_price (@argv)
+{
+	my $offer = $DEFAULT_OFFER;
+	GetOptionsFromArray( \@argv, 'offer=s' => \$offer ) or die $USAGE;
+	printf "%s: EUR %.4f per hour in %s\n", $offer, _price($offer), $ZONE;
+
+	return 0;
+}
+
+# _consumption():
+#	The month-to-date consumption of this project, in EUR, and the
+#	age of the read, in hours. The billing API is organization
+#	scoped, so the sum filters on the project.
+sub _consumption ()
+{
+	my $url = 'https://api.scaleway.com/billing/v2beta1/consumptions'
+	    . "?organization_id=$ENV{SCW_DEFAULT_ORGANIZATION_ID}";
+	my $output = _run_or_die(
+		'curl', '-sf',
+		'-H', "X-Auth-Token: $ENV{SCW_SECRET_KEY}", $url,
+	);
+	my $data     = $json->decode($output);
+	my $consumed = 0;
+	for my $item ( @{ $data->{consumptions} // [] } ) {
+		next
+		    unless ( $item->{project_id} // '' ) eq
+		    ( $ENV{SCW_DEFAULT_PROJECT_ID} // '' );
+		$consumed += _money( $item->{value} );
+	}
+	my $updated = _epoch( $data->{updated_at} );
+	my $age = defined $updated ? ( time - $updated ) / 3600 : undef;
+
+	return ( $consumed, $age );
+}
+
+# _forecast_verdict($consumed, $age_hours, $price, $hours, $budget):
+#	The stop decision of the pre-apply forecast check. A forecast
+#	must not assume a run cheaper than one hour (TRN-BUDGET-1).
+sub _forecast_verdict ( $consumed, $age_hours, $price, $hours, $budget )
+{
+	$hours = 1 if $hours < 1;
+	return ( 1, 'the consumption read holds no updated_at field' )
+	    unless defined $age_hours;
+	return ( 1,
+		sprintf 'the consumption read is %.1f hours old, over %d',
+		$age_hours, $STALE_HOURS )
+	    if $age_hours > $STALE_HOURS;
+	my $forecast = $price * $hours;
+	my $total    = $consumed + $forecast;
+	return ( 1,
+		sprintf 'EUR %.2f consumed plus EUR %.2f forecast passes '
+		    . 'the EUR %.2f budget',
+		$consumed, $forecast, $budget )
+	    if $total > $budget;
+
+	return ( 0,
+		sprintf 'EUR %.2f consumed plus EUR %.2f forecast stays '
+		    . 'under the EUR %.2f budget',
+		$consumed, $forecast, $budget );
+}
+
+sub cmd_forecast (@argv)
+{
+	my ( $price, $hours, $budget ) = ( undef, undef, $BUDGET_EUR );
+	GetOptionsFromArray(
+		\@argv,
+		'price=f'  => \$price,
+		'hours=f'  => \$hours,
+		'budget=f' => \$budget,
+	) or die $USAGE;
+	die $USAGE unless defined $price && defined $hours;
+
+	my ( $consumed, $age ) = _consumption();
+	my ( $stop, $reason ) =
+	    _forecast_verdict( $consumed, $age, $price, $hours, $budget );
+	say( ( $stop ? 'forecast: stop: ' : 'forecast: go: ' ) . $reason );
+
+	return $stop;
+}
+
+sub cmd_cost (@argv)
+{
+	my ( $consumed, $age ) = _consumption();
+	printf "cost: EUR %.2f of EUR %.2f (%d percent), read %.1f hours ago\n",
+	    $consumed, $BUDGET_EUR, 100 * $consumed / $BUDGET_EUR, $age // -1;
+
+	return 0;
+}
+
+# _bucket_versioning($bucket):
+#	The versioning status of one bucket: Enabled, Suspended, or the
+#	empty string for an unversioned bucket.
+sub _bucket_versioning ($bucket)
+{
+	my ( $code, $body ) =
+	    _curl_s3( 'GET', "https://$bucket.$ENDPOINT/?versioning" );
+	my ($status) = $body =~ m{<Status>([A-Za-z]+)</Status>};
+
+	return $status // '';
+}
+
+# _versioning_verdict($bucket, $status):
+#	The check of one bucket against COR-BUCKETS-2. Object Storage
+#	suspends versioning, and it never removes it, so "off" accepts
+#	an absent status and a Suspended status.
+sub _versioning_verdict ( $bucket, $status )
+{
+	my $expected = $VERSIONING{$bucket};
+	die "infra: no versioning rule for bucket $bucket\n"
+	    unless defined $expected;
+	my $on = ( $status // '' ) eq 'Enabled' ? 1 : 0;
+
+	return $on == $expected;
+}
+
+sub cmd_status (@argv)
+{
+	my $failed = 0;
+
+	my $servers = _scw(qw(instance server list), "zone=$ZONE");
+	my $ips     = _scw(qw(instance ip list),     "zone=$ZONE");
+	my $volumes = _scw(qw(instance volume list), "zone=$ZONE");
+	for my $server (@$servers) {
+		my $tags = _tags( $server->{tags} );
+		printf "status: server %s %s %s%s\n", $server->{name},
+		    $server->{commercial_type}, $server->{state},
+		    $tags->{'stx:managed'} ? '' : ' UNMANAGED';
+	}
+	printf "status: %d server(s), %d ip(s), %d volume(s) in %s\n",
+	    scalar @$servers, scalar @$ips, scalar @$volumes, $ZONE;
+
+	for my $bucket ( sort keys %VERSIONING ) {
+		my $status = _bucket_versioning($bucket);
+		my $ok     = _versioning_verdict( $bucket, $status );
+		printf "status: bucket %s versioning %s: %s\n", $bucket,
+		    $status || 'off', $ok ? 'ok' : 'MISMATCH (COR-BUCKETS-2)';
+		$failed = 1 unless $ok;
+	}
+
+	return $failed;
+}
+
+# _heartbeat_age($config, $run_id):
+#	The age of the heartbeat object, in minutes, or undef when the
+#	object is absent.
+sub _heartbeat_age ( $config, $run_id )
+{
+	my $url = "https://$config->{CHECKPOINT_BUCKET}.$ENDPOINT/"
+	    . "$config->{HEARTBEAT_PREFIX}/$run_id/heartbeat";
+	my ( $code, $headers ) = _curl_s3( 'HEAD', $url );
+	return undef if $code == 404;
+	die "infra: heartbeat read failed with HTTP $code\n"
+	    unless $code == 200;
+	my ($stamp) = $headers =~ /^last-modified:\s*(.+?)\r?$/im;
+	my $epoch = _epoch_http($stamp);
+	die "infra: heartbeat holds no Last-Modified date\n"
+	    unless defined $epoch;
+
+	return ( time - $epoch ) / 60;
+}
+
+# _watchdog_verdict($tags, $age_minutes, $heartbeat_age_minutes):
+#	The destroy decision for one server. The watchdog destroys the
+#	train stack in two cases only: the stack is idle, or the time
+#	passes stx:expires. It reports, and must not destroy, a
+#	resource with no stx:managed tag. It never touches a resource
+#	tagged stx:lifecycle=persistent.
+sub _watchdog_verdict ( $tags, $age_minutes, $heartbeat_age_minutes )
+{
+	return ( 'report', 'no stx:managed tag' )
+	    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
+	return ( 'skip', 'stx:lifecycle=persistent' )
+	    if ( $tags->{'stx:lifecycle'} // '' ) eq 'persistent';
+	return ( 'keep', 'not an ephemeral resource' )
+	    unless ( $tags->{'stx:lifecycle'} // '' ) eq 'ephemeral';
+	return ( 'report', 'an ephemeral resource outside the train stack' )
+	    unless ( $tags->{'stx:stack'} // '' ) eq 'train';
+
+	my $expires = _epoch( $tags->{'stx:expires'} );
+	return ( 'destroy', 'the time passes stx:expires' )
+	    if defined $expires && time > $expires;
+	return ( 'destroy', 'no stx:expires tag' ) unless defined $expires;
+
+	return ( 'keep', 'younger than the idle window' )
+	    if $age_minutes <= $IDLE_MINUTES;
+	return ( 'destroy', 'idle: the heartbeat object is absent' )
+	    unless defined $heartbeat_age_minutes;
+	return ( 'destroy', 'idle: the heartbeat is stale' )
+	    if $heartbeat_age_minutes > $IDLE_MINUTES;
+
+	return ( 'keep', 'the heartbeat is fresh' );
+}
+
+sub cmd_watchdog (@argv)
+{
+	my $config  = _config();
+	my $servers = _scw(qw(instance server list), "zone=$ZONE");
+	my $destroy = 0;
+
+	for my $server (@$servers) {
+		my $tags = _tags( $server->{tags} );
+		my $age  = _epoch( $server->{creation_date} );
+		my $age_minutes =
+		    defined $age ? ( time - $age ) / 60 : $IDLE_MINUTES + 1;
+		my $heartbeat =
+		    ( $tags->{'stx:stack'} // '' ) eq 'train'
+		    ? _heartbeat_age( $config, $tags->{'stx:run-id'} // 'none' )
+		    : undef;
+		my ( $verdict, $reason ) =
+		    _watchdog_verdict( $tags, $age_minutes, $heartbeat );
+		say "watchdog: $verdict: $server->{name}: $reason";
+		$destroy = 1 if $verdict eq 'destroy';
+	}
+
+	for my $ip ( @{ _scw( qw(instance ip list), "zone=$ZONE" ) } ) {
+		my $tags = _tags( $ip->{tags} );
+		say "watchdog: report: ip $ip->{address}: no stx:managed tag"
+		    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
+	}
+	for my $volume ( @{ _scw( qw(instance volume list), "zone=$ZONE" ) } ) {
+		my $tags = _tags( $volume->{tags} );
+		say "watchdog: report: volume $volume->{name}: "
+		    . 'no stx:managed tag'
+		    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
+	}
+
+	if ($destroy) {
+		cmd_down('train');
+
+		# Confirm the removal with a read, per the shared rules.
+		my $left = _scw(qw(instance server list), "zone=$ZONE");
+		for my $server (@$left) {
+			my $tags = _tags( $server->{tags} );
+			next unless ( $tags->{'stx:stack'} // '' ) eq 'train';
+			say "watchdog: report: $server->{name} survived the "
+			    . 'destroy';
+			return 1;
+		}
+		say 'watchdog: the destroy is confirmed: no train server '
+		    . 'remains';
+	}
+
+	return 0;
+}
+
+# _tofu($stack, @args):
+#	One OpenTofu call against one stack directory.
+sub _tofu ( $stack, @args )
+{
+	my ( $output, $status ) =
+	    _run( 'tofu', "-chdir=$ROOT/infra/$stack", @args );
+	print $output;
+	die "infra: tofu @args[0..0] failed for $stack\n" if $status;
+
+	return $output;
+}
+
+# _train_vars($offer, $run_id, $expires):
+#	The -var arguments of the train stack.
+sub _train_vars ( $offer, $run_id, $expires )
+{
+	my $config = _config();
+	my $key    = $ENV{STX_SSH_PUBLIC_KEY}
+	    or die "infra: STX_SSH_PUBLIC_KEY is not set\n";
+
+	return (
+		'-var' => "instance_type=$offer",
+		'-var' => "run_id=$run_id",
+		'-var' => "expires=$expires",
+		'-var' => "ssh_public_key=$key",
+		'-var' => "axolotl_image=$config->{AXOLOTL_IMAGE}",
+	);
+}
+
+# _train_options(@argv):
+#	The offer, the lifetime, the run identifier, and the expiry of
+#	one train session.
+sub _train_options (@argv)
+{
+	my ( $offer, $hours, $run_id ) = ( $DEFAULT_OFFER, 4, undef );
+	GetOptionsFromArray(
+		\@argv,
+		'offer=s'  => \$offer,
+		'hours=f'  => \$hours,
+		'run-id=s' => \$run_id,
+	) or die $USAGE;
+	$run_id //=
+	    defined $ENV{GITHUB_RUN_ID}
+	    ? "gh-$ENV{GITHUB_RUN_ID}"
+	    : 'local-' . time;
+	my $expires = _rfc3339( time + $hours * 3600 );
+
+	return ( $offer, $hours, $run_id, $expires );
+}
+
+# _down_vars():
+#	The -var arguments of a train destroy. A destroy reads the
+#	state, not the configuration. Each value passes validation, and
+#	none reaches a resource.
+sub _down_vars ()
+{
+	return (
+		'-var' => 'instance_type=H100-1-80G',
+		'-var' => 'run_id=down',
+		'-var' => 'expires=1970-01-01T00:00:00Z',
+		'-var' => 'ssh_public_key=down',
+		'-var' => 'axolotl_image=down',
+	);
+}
+
+sub _check_stack ($stack)
+{
+	die $USAGE unless $STACKS{ $stack // '' };
+
+	return;
+}
+
+sub cmd_plan ( $stack, @argv )
+{
+	_check_stack($stack);
+	my @vars;
+	if ( $stack eq 'train' ) {
+		my ( $offer, undef, $run_id, $expires ) =
+		    _train_options(@argv);
+		@vars = _train_vars( $offer, $run_id, $expires );
+	}
+	_tofu( $stack, qw(init -input=false) );
+	_tofu( $stack, qw(plan -input=false), @vars );
+
+	return 0;
+}
+
+sub cmd_plan_ro ( $stack, @argv )
+{
+	_check_stack($stack);
+	my @vars;
+	if ( $stack eq 'train' ) {
+		my ( $offer, undef, $run_id, $expires ) =
+		    _train_options(@argv);
+		@vars = _train_vars( $offer, $run_id, $expires );
+	}
+
+	# A pull-request plan writes no state, so it must not lock.
+	_tofu( $stack, qw(init -input=false) );
+	_tofu( $stack, qw(plan -input=false -lock=false), @vars );
+
+	return 0;
+}
+
+# _wait_ssh($ip):
+#	Wait for the instance SSH port after boot.
+sub _wait_ssh ($ip)
+{
+	my @ssh = _ssh_command($ip);
+	for my $try ( 1 .. 60 ) {
+		my ( undef, $status ) = _run( @ssh, 'true' );
+		return if $status == 0;
+		sleep 10;
+	}
+	die "infra: SSH to $ip did not answer\n";
+}
+
+# _ssh_command($ip):
+#	The ssh argument list of the train instance.
+sub _ssh_command ($ip)
+{
+	my @argv = (
+		'ssh',
+		'-o', 'BatchMode=yes',
+		'-o', 'ConnectTimeout=5',
+		'-o', 'StrictHostKeyChecking=accept-new',
+	);
+	push @argv, '-i', $ENV{STX_SSH_KEY_FILE} if $ENV{STX_SSH_KEY_FILE};
+
+	return ( @argv, "root\@$ip" );
+}
+
+# _train_application_id():
+#	The IAM application of the train credential, by name, never by
+#	a hardcoded UUID.
+sub _train_application_id ()
+{
+	my $applications =
+	    _scw( qw(iam application list), 'name=stx.prod.train' );
+	die "infra: no stx.prod.train application\n" unless @$applications;
+
+	return $applications->[0]{id};
+}
+
+# _deliver_train_key($ip, $expires, $run_id):
+#	The train credential, per the shared rules: CI creates a key on
+#	the train application, and it delivers the key over SSH after
+#	boot. The key must not touch OpenTofu, user_data, or state.
+sub _deliver_train_key ( $ip, $expires, $run_id )
+{
+	my $application = _train_application_id();
+	my $key         = _scw(
+		qw(iam api-key create),
+		"application-id=$application",
+		"expires-at=$expires",
+	);
+	my @ssh = _ssh_command($ip);
+	my $pid = open my $fh, '|-',
+	    @ssh, 'umask 077 && cat > /root/stx-train.env'
+	    or die "infra: ssh to $ip: $!\n";
+	print $fh <<"EOF";
+SCW_ACCESS_KEY=$key->{access_key}
+SCW_SECRET_KEY=$key->{secret_key}
+SCW_DEFAULT_PROJECT_ID=$ENV{SCW_DEFAULT_PROJECT_ID}
+SCW_DEFAULT_ORGANIZATION_ID=$ENV{SCW_DEFAULT_ORGANIZATION_ID}
+AWS_ACCESS_KEY_ID=$key->{access_key}
+AWS_SECRET_ACCESS_KEY=$key->{secret_key}
+AWS_DEFAULT_REGION=$REGION
+STX_RUN_ID=$run_id
+STX_EXPIRES=$expires
+EOF
+	close $fh;
+	die "infra: the key delivery to $ip failed\n" if $?;
+	say "up: the train key is delivered to $ip";
+
+	return;
+}
+
+sub cmd_up ( $stack, @argv )
+{
+	_check_stack($stack);
+	if ( $stack ne 'train' ) {
+		_tofu( $stack, qw(init -input=false) );
+		_tofu( $stack, qw(apply -input=false -auto-approve) );
+		return 0;
+	}
+
+	my ( $offer, $hours, $run_id, $expires ) = _train_options(@argv);
+	my @vars = _train_vars( $offer, $run_id, $expires );
+
+	# TRN-INST-1: read the live price first, then the forecast
+	# check. Billing starts at the apply below.
+	my $price = _price($offer);
+	printf "up: %s at EUR %.4f per hour, for %s hour(s)\n",
+	    $offer, $price, $hours;
+	my ( $consumed, $age ) = _consumption();
+	my ( $stop, $reason ) =
+	    _forecast_verdict( $consumed, $age, $price, $hours, $BUDGET_EUR );
+	say( ( $stop ? 'forecast: stop: ' : 'forecast: go: ' ) . $reason );
+	return 1 if $stop;
+
+	_tofu( $stack, qw(init -input=false) );
+	_tofu( $stack, qw(apply -input=false -auto-approve), @vars );
+	my $ip = _run_or_die(
+		'tofu', "-chdir=$ROOT/infra/train",
+		qw(output -raw public_ip)
+	);
+	chomp $ip;
+	_wait_ssh($ip);
+	_deliver_train_key( $ip, $expires, $run_id );
+	say "up: run $run_id on $ip expires at $expires";
+
+	return 0;
+}
+
+sub cmd_down ( $stack, @argv )
+{
+	_check_stack($stack);
+	my @vars = $stack eq 'train' ? _down_vars() : ();
+	_tofu( $stack, qw(init -input=false) );
+	_tofu( $stack, qw(destroy -input=false -auto-approve), @vars );
+	return 0 unless $stack eq 'train';
+
+	# Delete each train key. The expiry is the backstop.
+	my $application = _train_application_id();
+	my $keys        = _scw(
+		qw(iam api-key list), "application-id=$application",
+	);
+	for my $key (@$keys) {
+		_scw( qw(iam api-key delete), $key->{access_key} );
+	}
+	$keys = _scw( qw(iam api-key list), "application-id=$application" );
+	die "infra: a train key survived the delete\n" if @$keys;
+	say 'down: the train keys are deleted';
+
+	return 0;
+}
+
+# main(@argv):
+#	The command dispatcher.
+sub main (@argv)
+{
+	my $command = shift @argv // die $USAGE;
+	my %commands = (
+		'price'    => \&cmd_price,
+		'forecast' => \&cmd_forecast,
+		'cost'     => \&cmd_cost,
+		'status'   => \&cmd_status,
+		'watchdog' => \&cmd_watchdog,
+	);
+	return $commands{$command}->(@argv) if $commands{$command};
+	my %stack_commands = (
+		'plan'    => \&cmd_plan,
+		'plan-ro' => \&cmd_plan_ro,
+		'up'      => \&cmd_up,
+		'down'    => \&cmd_down,
+	);
+	return $stack_commands{$command}->(@argv) if $stack_commands{$command};
+	die $USAGE;
+}
+
+exit main(@ARGV) unless caller;

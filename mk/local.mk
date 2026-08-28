@@ -48,4 +48,44 @@ infra-check: infra-fmt-check
 infra-bootstrap:
 	cd infra/bootstrap && $(TOFU) init -input=false && $(TOFU) apply
 
+# The task runner of the shared instructions. scripts/infra holds the
+# logic: the live price read and the forecast check before an apply
+# (TRN-INST-1, TRN-BUDGET-1), the bucket versioning check of
+# infra-status (COR-BUCKETS-2), and the watchdog decisions. The train
+# options: TRAIN_OFFER selects the offer, and TRAIN_HOURS sets the
+# lease.
+INFRA        = scripts/infra
+TRAIN_OFFER ?= H100-1-80G
+TRAIN_HOURS ?= 4
+
+infra-plan:
+	@test -n "$(STACK)" || { echo "usage: make infra-plan STACK=<name>"; exit 1; }
+	$(INFRA) plan $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+
+infra-plan-ro:
+	@test -n "$(STACK)" || { echo "usage: make infra-plan-ro STACK=<name>"; exit 1; }
+	$(INFRA) plan-ro $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+
+infra-up:
+	@test -n "$(STACK)" || { echo "usage: make infra-up STACK=<name>"; exit 1; }
+	$(INFRA) up $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+
+infra-down:
+	@test -n "$(STACK)" || { echo "usage: make infra-down STACK=<name>"; exit 1; }
+	$(INFRA) down $(STACK)
+
+infra-price:
+	$(INFRA) price --offer $(TRAIN_OFFER)
+
+infra-status:
+	$(INFRA) status
+
+infra-cost:
+	$(INFRA) cost
+
+infra-watchdog:
+	$(INFRA) watchdog
+
 .PHONY: infra-fmt-check infra-validate infra-check infra-bootstrap
+.PHONY: infra-plan infra-plan-ro infra-up infra-down infra-price
+.PHONY: infra-status infra-cost infra-watchdog
