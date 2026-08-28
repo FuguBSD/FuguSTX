@@ -3,7 +3,7 @@ name = "stx-corpus"
 version = "0.0.0"
 description = "The FuguSTX corpus pipeline and the tier T0 score script."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["boto3>=1.35"]
 
 [build-system]
 requires = ["hatchling"]
