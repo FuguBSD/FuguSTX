@@ -622,10 +622,15 @@ sub _train_application_id ()
 sub _deliver_train_key ( $ip, $expires, $run_id )
 {
 	my $application = _train_application_id();
-	my $key         = _scw(
+
+	# The key's default project decides which project its Object
+	# Storage calls target. A probe on 2026-08-28 proved that the
+	# platform defaults it to the organization default project.
+	my $key = _scw(
 		qw(iam api-key create),
 		"application-id=$application",
 		"expires-at=$expires",
+		"default-project-id=$ENV{SCW_DEFAULT_PROJECT_ID}",
 	);
 	my @ssh = _ssh_command($ip);
 	my $pid = open my $fh, '|-',
