@@ -621,7 +621,9 @@ sub _wait_ssh ($ip)
 }
 
 # _ssh_command($ip):
-#	The ssh argument list of the train instance.
+#	The ssh argument list of the train instance. The keepalives
+#	hold the connection through a long quiet remote step: the
+#	runner NAT drops an idle stream (probed 2026-08-28).
 sub _ssh_command ($ip)
 {
 	my @argv = (
@@ -629,6 +631,8 @@ sub _ssh_command ($ip)
 		'-o', 'BatchMode=yes',
 		'-o', 'ConnectTimeout=5',
 		'-o', 'StrictHostKeyChecking=accept-new',
+		'-o', 'ServerAliveInterval=30',
+		'-o', 'ServerAliveCountMax=10',
 	);
 	push @argv, '-i', $ENV{STX_SSH_KEY_FILE} if $ENV{STX_SSH_KEY_FILE};
 

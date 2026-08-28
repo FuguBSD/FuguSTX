@@ -406,6 +406,9 @@ sub cmd_serve (@argv)
 	GetOptionsFromArray( \@argv, 'model=s' => \$model ) or die $USAGE;
 	die $USAGE unless defined $model;
 
+	# A dead scoring session leaves its container behind, and a
+	# second run with the same name fails. Sweep it first.
+	_run( 'docker', 'rm', '-f', 'stx-llama' );
 	_run_or_die(
 		'docker', 'run', '-d', '--name', 'stx-llama',
 		'--gpus', 'all',
