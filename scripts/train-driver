@@ -325,6 +325,8 @@ sub cmd_merge (@argv)
 	) or die $USAGE;
 	die $USAGE unless defined $config && defined $lora && defined $output;
 
+	# A merge can pass the 20-minute idle window, so it heartbeats.
+	cmd_heartbeat('start');
 	_run_or_die(
 		'docker', 'run', '--rm', '--gpus', 'all',
 		'-v', '/scratch:/scratch',
@@ -336,6 +338,7 @@ sub cmd_merge (@argv)
 		"--lora-model-dir=$lora",
 	);
 	_run_or_die( 'cp', '-a', "$lora/merged", $output );
+	cmd_heartbeat('stop');
 	say "merge: $output holds the merged model";
 
 	return 0;
@@ -351,7 +354,9 @@ sub cmd_gguf (@argv)
 	) or die $USAGE;
 	die $USAGE unless defined $input && defined $output;
 
-	# Decision T2: the artifact is one GGUF file at Q8_0.
+	# Decision T2: the artifact is one GGUF file at Q8_0. The
+	# conversion can pass the idle window, so it heartbeats.
+	cmd_heartbeat('start');
 	_run_or_die(
 		'docker', 'run', '--rm',
 		'-v', '/scratch:/scratch',
@@ -359,6 +364,7 @@ sub cmd_gguf (@argv)
 		'--convert', $input,
 		'--outfile', $output, '--outtype', 'q8_0',
 	);
+	cmd_heartbeat('stop');
 	say "gguf: $output is the Q8_0 artifact";
 
 	return 0;
@@ -417,7 +423,10 @@ sub cmd_put (@argv)
 	die $USAGE unless defined $file && defined $key;
 	$bucket //= $ENV{ARTIFACTS_BUCKET};
 
+	# A large upload can pass the idle window, so it heartbeats.
+	cmd_heartbeat('start');
 	_aws( 'cp', $file, "s3://$bucket/$key" );
+	cmd_heartbeat('stop');
 	say "put: s3://$bucket/$key";
 
 	return 0;

@@ -40,6 +40,10 @@ jobs:
       SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
       AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      AWS_DEFAULT_REGION: fr-par
+      # A free-text input reaches the shell through the environment,
+      # never through an inline expression.
+      RUN_ID: ${{ inputs.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +64,7 @@ jobs:
       - name: Fetch the model artifact
         run: |
           aws --endpoint-url https://s3.fr-par.scw.cloud s3 cp \
-            "s3://stx-artifacts/runs/${{ inputs.run_id }}/stx-${{ inputs.name }}.gguf" model.gguf
+            "s3://stx-artifacts/runs/$RUN_ID/stx-${{ inputs.name }}.gguf" model.gguf
 
       - name: Sweep the shard
         run: |
@@ -70,7 +74,7 @@ jobs:
             --shard "${{ matrix.shard }}/$SHARDS" \
             --stx "bin/stx label -m model.gguf -t 4" \
             --model model.gguf \
-            --run-id "${{ inputs.run_id }}" \
+            --run-id "$RUN_ID" \
             --llama-version "$LLAMA_VERSION" \
             --threads 4 \
             --out "shard-${{ matrix.shard }}.json"
@@ -92,6 +96,8 @@ jobs:
       SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
       AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      AWS_DEFAULT_REGION: fr-par
+      RUN_ID: ${{ inputs.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,7 +115,7 @@ jobs:
         run: |
           . train/config.env
           uv run --locked python -m stx_corpus.t1 \
-            --run-id "${{ inputs.run_id }}" \
+            --run-id "$RUN_ID" \
             --llama-version "$LLAMA_VERSION" \
             --aggregate shards/shard-*.json \
             --upload

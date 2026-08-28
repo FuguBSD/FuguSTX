@@ -202,14 +202,14 @@ subtest 'a forecast never assumes a run cheaper than one hour' => sub {
 	like( $output, qr/EUR 2\.00 forecast/, 'one full hour is priced' );
 };
 
+# A versioning fixture ends with the HTTP code that curl -w appends.
+my $enabled =
+    "<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>\n200";
 my %versioning_ok = (
-	'versioning-stx-corpus.xml' =>
-	    '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>',
-	'versioning-stx-evalcorpus.xml' =>
-	    '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>',
-	'versioning-stx-artifacts.xml' =>
-	    '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>',
-	'versioning-stx-checkpoints.xml' => '<VersioningConfiguration/>',
+	'versioning-stx-corpus.xml'      => $enabled,
+	'versioning-stx-evalcorpus.xml'  => $enabled,
+	'versioning-stx-artifacts.xml'   => $enabled,
+	'versioning-stx-checkpoints.xml' => "<VersioningConfiguration/>\n200",
 );
 
 subtest 'the status versioning check passes on COR-BUCKETS-2' => sub {
@@ -229,8 +229,7 @@ subtest 'the status versioning check fails on a mismatch' => sub {
 		fixtures => {
 			'servers.json' => '[]',
 			%versioning_ok,
-			'versioning-stx-checkpoints.xml' =>
-			    '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>',
+			'versioning-stx-checkpoints.xml' => $enabled,
 		},
 	);
 	is( $status, 1, 'exit 1' );
@@ -244,10 +243,28 @@ subtest 'a suspended checkpoint bucket counts as off' => sub {
 			'servers.json' => '[]',
 			%versioning_ok,
 			'versioning-stx-checkpoints.xml' =>
-			    '<VersioningConfiguration><Status>Suspended</Status></VersioningConfiguration>',
+			    "<VersioningConfiguration><Status>Suspended</Status></VersioningConfiguration>\n200",
 		},
 	);
 	is( $status, 0, 'exit 0' );
+};
+
+subtest 'a failed versioning read fails the status' => sub {
+
+	# An error body must not pass as "off", per the shared
+	# verification rules.
+	my ( $output, $status ) = _run(
+		'status',
+		fixtures => {
+			'servers.json' => '[]',
+			%versioning_ok,
+			'versioning-stx-checkpoints.xml' =>
+			    "<Error><Code>AccessDenied</Code></Error>\n403",
+		},
+	);
+	isnt( $status, 0, 'exit non-zero' );
+	like( $output, qr/versioning read of stx-checkpoints failed/,
+		'the reason' );
 };
 
 subtest 'the watchdog reports, and never destroys, an unmanaged server' =>
@@ -329,6 +346,34 @@ subtest 'a passed expiry destroys the train stack' => sub {
 	like( $output, qr/watchdog: destroy: .*passes stx:expires/,
 		'the verdict' );
 	like( $calls, qr/tofu.*destroy/, 'the destroy runs' );
+};
+
+subtest 'a train server without an expiry is a report, not a destroy' => sub {
+	my ( $output, $status, $calls ) = _run(
+		'watchdog',
+		fixtures => { 'servers.json' => _server( 60, %train_tags ) },
+	);
+	is( $status, 0, 'exit 0' );
+	like( $output, qr/watchdog: report: .*no stx:expires tag/,
+		'the report' );
+	unlike( $calls, qr/tofu.*destroy/, 'no destroy runs' );
+};
+
+subtest 'a failed heartbeat read is a report, not a destroy' => sub {
+	my ( $output, $status, $calls ) = _run(
+		'watchdog',
+		fixtures => {
+			'servers.json' => _server(
+				60, %train_tags,
+				'stx:expires' => _rfc3339( time + 7200 ),
+			),
+			'heartbeat.txt' => "HTTP/2 500\r\n\r\n",
+		},
+	);
+	is( $status, 0, 'exit 0' );
+	like( $output, qr/watchdog: report: .*heartbeat read failed/,
+		'the report' );
+	unlike( $calls, qr/tofu.*destroy/, 'no destroy runs' );
 };
 
 subtest 'a young train stack is not idle yet' => sub {

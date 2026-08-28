@@ -72,16 +72,16 @@ phase applies.
 The drift gate maps each document to the code that implements it. A document
 with no code keeps "—". Set the roots when the layout lands.
 
-| Document          | Roots                                                        |
-| ----------------- | ------------------------------------------------------------ |
-| engine.md         | `share`, `bin`                                               |
-| corpus.md         | `packages/stx-corpus`, `infra/persistent`                    |
-| training.md       | `train`, `scripts/train-driver`, `packages/stx-corpus`       |
-| evaluation.md     | `packages/stx-corpus`                                        |
-| infrastructure.md | `infra`, `scripts/infra`, `mk/local.mk`, `.github/workflows` |
-| LEARNING.md       | —                                                            |
-| licensing.md      | —                                                            |
-| risks.md          | —                                                            |
+| Document          | Roots                                                                   |
+| ----------------- | ----------------------------------------------------------------------- |
+| engine.md         | `share`, `bin`                                                          |
+| corpus.md         | `packages/stx-corpus`, `infra/persistent`                               |
+| training.md       | `train`, `scripts/train`, `scripts/train-driver`, `packages/stx-corpus` |
+| evaluation.md     | `packages/stx-corpus`                                                   |
+| infrastructure.md | `infra`, `scripts/infra`, `mk/local.mk`, `.github/workflows`            |
+| LEARNING.md       | —                                                                       |
+| licensing.md      | —                                                                       |
+| risks.md          | —                                                                       |
 
 ## Retired IDs
 

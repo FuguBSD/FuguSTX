@@ -53,9 +53,13 @@ EOF
 my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
 
 # _ip():
-#	The instance address, from the train stack output.
+#	The instance address, from the train stack output. A fresh CI
+#	runner holds no initialized backend, so the read inits first.
 sub _ip ()
 {
+	system( 'tofu', "-chdir=$ROOT/infra/train", 'init', '-input=false' )
+	    == 0
+	    or die "train: tofu init failed for the train stack\n";
 	my $pid = open my $fh, '-|',
 	    'tofu', "-chdir=$ROOT/infra/train", 'output', '-raw', 'public_ip'
 	    or die "train: run tofu: $!\n";
@@ -98,13 +102,14 @@ sub _push ($ip)
 }
 
 # _remote($ip, $command):
-#	One driver step on the instance, with the train environment.
+#	One driver step on the instance, with the train environment and
+#	the campaign pins of train/config.env.
 sub _remote ( $ip, $command )
 {
 	my @ssh = _ssh_argv($ip);
 	my $wrapped =
-	    "set -a; . /root/stx-train.env; set +a; "
-	    . "cd /scratch/stx && $command";
+	    'cd /scratch/stx && set -a && . /root/stx-train.env && '
+	    . ". train/config.env && set +a && $command";
 	system( @ssh, $wrapped ) == 0
 	    or die "train: the remote step failed: $command\n";
 

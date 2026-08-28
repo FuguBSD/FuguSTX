@@ -75,7 +75,8 @@ infra-down:
 	$(INFRA) down $(STACK)
 
 infra-price:
-	$(INFRA) price --offer $(TRAIN_OFFER)
+	@test -n "$(STACK)" || { echo "usage: make infra-price STACK=<name>"; exit 1; }
+	$(INFRA) price $(STACK) --offer $(TRAIN_OFFER)
 
 infra-status:
 	$(INFRA) status

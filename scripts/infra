@@ -18,7 +18,7 @@
 
 # infra: the task runner of the shared infrastructure instructions.
 #
-# usage: infra price [--offer NAME]
+# usage: infra price STACK [--offer NAME]
 #        infra forecast --price EUR --hours N [--budget EUR]
 #        infra cost
 #        infra status
@@ -47,7 +47,7 @@ use JSON::PP       ();
 use Time::Local    qw(timegm);
 
 my $USAGE = <<'EOF';
-usage: infra price [--offer NAME]
+usage: infra price STACK [--offer NAME]
        infra forecast --price EUR --hours N [--budget EUR]
        infra cost
        infra status
@@ -194,22 +194,26 @@ sub _config ()
 
 # _curl_s3($method, $url):
 #	One SigV4 call against Object Storage, with curl. Return the
-#	HTTP status and the body or the headers.
+#	real HTTP status and the body or the headers: an error response
+#	can be a valid body, per the shared verification rules.
 sub _curl_s3 ($method, $url)
 {
 	my @argv = (
 		'curl', '-s', '--aws-sigv4', "aws:amz:$REGION:s3",
 		'--user', "$ENV{SCW_ACCESS_KEY}:$ENV{SCW_SECRET_KEY}",
 	);
-	push @argv, '-I' if $method eq 'HEAD';
+	push @argv, $method eq 'HEAD' ? '-I' : ( '-w', "\n%{http_code}" );
 	my ( $output, $status ) = _run( @argv, $url );
 	die "infra: curl $url failed with status $status\n" if $status;
-	my ($code) =
-	    $method eq 'HEAD'
-	    ? $output =~ m{^HTTP/[0-9.]+\s+(\d{3})}
-	    : (200);
+	my $code;
+	if ( $method eq 'HEAD' ) {
+		($code) = $output =~ m{^HTTP/[0-9.]+\s+(\d{3})};
+	}
+	else {
+		( $output, $code ) = $output =~ /\A(.*)\n(\d{3})\z/s;
+	}
 
-	return ( $code // 0, $output );
+	return ( $code // 0, $output // '' );
 }
 
 # _price($offer):
@@ -226,10 +230,15 @@ sub _price ($offer)
 	die "infra: unknown offer in $ZONE: $offer\n";
 }
 
-sub cmd_price (@argv)
+sub cmd_price ( $stack, @argv )
 {
+	_check_stack($stack);
 	my $offer = $DEFAULT_OFFER;
 	GetOptionsFromArray( \@argv, 'offer=s' => \$offer ) or die $USAGE;
+	if ( $stack ne 'train' ) {
+		say "$stack: the stack declares no compute";
+		return 0;
+	}
 	printf "%s: EUR %.4f per hour in %s\n", $offer, _price($offer), $ZONE;
 
 	return 0;
@@ -317,11 +326,14 @@ sub cmd_cost (@argv)
 
 # _bucket_versioning($bucket):
 #	The versioning status of one bucket: Enabled, Suspended, or the
-#	empty string for an unversioned bucket.
+#	empty string for an unversioned bucket. A failed read dies: an
+#	error body must not pass as "off".
 sub _bucket_versioning ($bucket)
 {
 	my ( $code, $body ) =
 	    _curl_s3( 'GET', "https://$bucket.$ENDPOINT/?versioning" );
+	die "infra: the versioning read of $bucket failed with HTTP $code\n"
+	    unless $code == 200;
 	my ($status) = $body =~ m{<Status>([A-Za-z]+)</Status>};
 
 	return $status // '';
@@ -387,13 +399,15 @@ sub _heartbeat_age ( $config, $run_id )
 	return ( time - $epoch ) / 60;
 }
 
-# _watchdog_verdict($tags, $age_minutes, $heartbeat_age_minutes):
+# _watchdog_verdict($tags, $age_minutes, $heartbeat_getter):
 #	The destroy decision for one server. The watchdog destroys the
 #	train stack in two cases only: the stack is idle, or the time
 #	passes stx:expires. It reports, and must not destroy, a
-#	resource with no stx:managed tag. It never touches a resource
-#	tagged stx:lifecycle=persistent.
-sub _watchdog_verdict ( $tags, $age_minutes, $heartbeat_age_minutes )
+#	resource with no stx:managed tag, a resource with no
+#	stx:expires tag, or a resource behind a failed heartbeat read.
+#	It never touches a resource tagged stx:lifecycle=persistent.
+#	The getter runs only when the idle case needs the heartbeat.
+sub _watchdog_verdict ( $tags, $age_minutes, $heartbeat_getter )
 {
 	return ( 'report', 'no stx:managed tag' )
 	    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
@@ -405,16 +419,18 @@ sub _watchdog_verdict ( $tags, $age_minutes, $heartbeat_age_minutes )
 	    unless ( $tags->{'stx:stack'} // '' ) eq 'train';
 
 	my $expires = _epoch( $tags->{'stx:expires'} );
+	return ( 'report', 'no stx:expires tag' ) unless defined $expires;
 	return ( 'destroy', 'the time passes stx:expires' )
-	    if defined $expires && time > $expires;
-	return ( 'destroy', 'no stx:expires tag' ) unless defined $expires;
+	    if time > $expires;
 
 	return ( 'keep', 'younger than the idle window' )
 	    if $age_minutes <= $IDLE_MINUTES;
+	my $heartbeat = eval { $heartbeat_getter->() };
+	return ( 'report', 'the heartbeat read failed; no destroy' ) if $@;
 	return ( 'destroy', 'idle: the heartbeat object is absent' )
-	    unless defined $heartbeat_age_minutes;
+	    unless defined $heartbeat;
 	return ( 'destroy', 'idle: the heartbeat is stale' )
-	    if $heartbeat_age_minutes > $IDLE_MINUTES;
+	    if $heartbeat > $IDLE_MINUTES;
 
 	return ( 'keep', 'the heartbeat is fresh' );
 }
@@ -430,12 +446,12 @@ sub cmd_watchdog (@argv)
 		my $age  = _epoch( $server->{creation_date} );
 		my $age_minutes =
 		    defined $age ? ( time - $age ) / 60 : $IDLE_MINUTES + 1;
-		my $heartbeat =
-		    ( $tags->{'stx:stack'} // '' ) eq 'train'
-		    ? _heartbeat_age( $config, $tags->{'stx:run-id'} // 'none' )
-		    : undef;
+		my $getter = sub {
+			_heartbeat_age( $config,
+				$tags->{'stx:run-id'} // 'none' );
+		};
 		my ( $verdict, $reason ) =
-		    _watchdog_verdict( $tags, $age_minutes, $heartbeat );
+		    _watchdog_verdict( $tags, $age_minutes, $getter );
 		say "watchdog: $verdict: $server->{name}: $reason";
 		$destroy = 1 if $verdict eq 'destroy';
 	}
@@ -658,6 +674,16 @@ sub cmd_up ( $stack, @argv )
 {
 	_check_stack($stack);
 	if ( $stack ne 'train' ) {
+
+		# The forecast check gates every apply. A stack without
+		# compute forecasts zero, so the check still stops on a
+		# stale read or a spent budget.
+		my ( $consumed, $age ) = _consumption();
+		my ( $stop, $reason ) =
+		    _forecast_verdict( $consumed, $age, 0, 1, $BUDGET_EUR );
+		say(      ( $stop ? 'forecast: stop: ' : 'forecast: go: ' )
+			. $reason );
+		return 1 if $stop;
 		_tofu( $stack, qw(init -input=false) );
 		_tofu( $stack, qw(apply -input=false -auto-approve) );
 		return 0;
@@ -720,7 +746,6 @@ sub main (@argv)
 {
 	my $command = shift @argv // die $USAGE;
 	my %commands = (
-		'price'    => \&cmd_price,
 		'forecast' => \&cmd_forecast,
 		'cost'     => \&cmd_cost,
 		'status'   => \&cmd_status,
@@ -728,6 +753,7 @@ sub main (@argv)
 	);
 	return $commands{$command}->(@argv) if $commands{$command};
 	my %stack_commands = (
+		'price'   => \&cmd_price,
 		'plan'    => \&cmd_plan,
 		'plan-ro' => \&cmd_plan_ro,
 		'up'      => \&cmd_up,

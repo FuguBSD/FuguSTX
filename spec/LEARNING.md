@@ -136,10 +136,10 @@ apply to every entry.
   pipeline credential. They do not say that the pipeline policy then needs an
   IAM write. A probe proved that `IAMApplicationManager` covers api-key create
   and delete on an application, so the pipeline policy takes that set in its
-  organization-scoped rule. The set also mints keys on the operator application:
-  the narrow-set list of IAC-APPLY-6 accepts that trade, and this gap is a
-  candidate correction for the shared instructions, per LRN-DELIVER-3. Maps to:
-  the shared instructions, FuguTTX D9.
+  organization-scoped rule. The set also mints keys on the operator application.
+  [IAC-APPLY-6](infrastructure.md#iac-apply) accepts that trade at organization
+  scope. The gap is a candidate correction for the shared instructions, per
+  LRN-DELIVER-3. Maps to: the shared instructions, FuguTTX D9.
 - **A minted key defaults to the wrong project.** `scw iam api-key create`
   without `default-project-id` binds the key to the organization default
   project, and the Object Storage calls of the key then target that project.
@@ -157,9 +157,9 @@ apply to every entry.
   counts. Maps to: FuguTTX IAC-PREREQ, the shared instructions.
 - **The lanes and the pairs are in the buckets.** The upload wrote 32,516
   training-lane records, 22,123 SFT pairs, and 7,009 prose paragraphs to
-  `stx-corpus`, and 4,310 eval sentences to `stx-evalcorpus`, keyed flat with a
-  manifest that records the `r2.18` tag. Maps to: FuguTTX IAC-PERSIST, FuguTTX
-  D6.
+  `stx-corpus`. The eval lane holds 4,310 sentences in `stx-evalcorpus`. The
+  keys are flat, and a manifest records the `r2.18` tag. Maps to: FuguTTX
+  IAC-PERSIST, FuguTTX D6.
 
 <a id="lrn-scope"></a>
 

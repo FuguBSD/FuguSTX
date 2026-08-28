@@ -33,7 +33,10 @@ applies these rules first, so FuguTTX inherits tested rules
   organization-scoped rule. Scaleway offers no project scope for the IAM
   managers, for `BillingManager`, or for `BillingReadOnly`. Each key therefore
   reaches every project of the shared Organization. Only the narrow permission
-  sets of that rule are acceptable at organization scope.
+  sets of that rule are acceptable at organization scope. The pipeline rule can
+  hold `IAMApplicationManager`: the train-credential flow of the synced
+  instructions mints and deletes the train key at stack up and down, and
+  Scaleway offers no narrower set for an api-key write.
 - **IAC-APPLY-7** — Each principal that applies `infra/persistent` must hold the
   operator scope. The state-bucket policy must name each one. An agent
   application can be such a principal, as an exception to the smallest-scope

@@ -67,6 +67,9 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
       STX_SSH_KEY_FILE: /home/runner/.ssh/stx-train
+      # A free-text input reaches the shell through the environment,
+      # never through an inline expression.
+      TRAIN_HOURS_INPUT: ${{ inputs.hours }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,7 +89,7 @@ jobs:
       - name: Stack up
         if: inputs.action == 'up'
         run: |
-          make infra-up STACK=train TRAIN_OFFER='${{ inputs.offer }}' TRAIN_HOURS='${{ inputs.hours }}'
+          make infra-up STACK=train TRAIN_OFFER='${{ inputs.offer }}' TRAIN_HOURS="$TRAIN_HOURS_INPUT"
 
       - name: CPT rehearsal
         if: inputs.action == 'cpt'
