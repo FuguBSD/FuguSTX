@@ -36,25 +36,25 @@ component rehearses, and the dated entries that hold its findings. An entry is
 the one source of a finding: a row only points. "The shared instructions" names
 the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
 
-| Pilot component                                | FuguTTX units rehearsed                             | Entries                |
-| ---------------------------------------------- | --------------------------------------------------- | ---------------------- |
-| H100 quota request and grant time              | FuguTTX IAC-TRAIN, FuguTTX IAC-PREREQ               | 2026-08-25             |
-| Live price read before apply                   | FuguTTX IAC-PREREQ, the shared instructions         | —                      |
-| Budget ownership in the shared Organization    | FuguTTX IAC-PREREQ, the shared instructions         | 2026-08-26             |
-| State backend, native lock, encryption         | The shared instructions                             | 2026-08-26             |
-| Three-application credential split             | The shared instructions, FuguTTX D9                 | 2026-08-25, 2026-08-26 |
-| Operator network and key delivery              | The shared instructions, FuguTTX IAC-DEV            | 2026-08-26             |
-| Train key over SSH, expiry backstop            | The shared instructions                             | —                      |
-| Watchdog, heartbeat, claim protocol            | The shared instructions                             | —                      |
-| Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          | —                      |
-| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | —                      |
-| Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | —                      |
-| CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        | —                      |
-| Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         | —                      |
-| Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     | 2026-08-26             |
-| KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      | 2026-08-26             |
-| Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | —                      |
-| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | —                      |
+| Pilot component                                | FuguTTX units rehearsed                             | Entries                            |
+| ---------------------------------------------- | --------------------------------------------------- | ---------------------------------- |
+| H100 quota request and grant time              | FuguTTX IAC-TRAIN, FuguTTX IAC-PREREQ               | 2026-08-25, 2026-08-28             |
+| Live price read before apply                   | FuguTTX IAC-PREREQ, the shared instructions         | 2026-08-28                         |
+| Budget ownership in the shared Organization    | FuguTTX IAC-PREREQ, the shared instructions         | 2026-08-26                         |
+| State backend, native lock, encryption         | The shared instructions                             | 2026-08-26                         |
+| Three-application credential split             | The shared instructions, FuguTTX D9                 | 2026-08-25, 2026-08-26, 2026-08-28 |
+| Operator network and key delivery              | The shared instructions, FuguTTX IAC-DEV            | 2026-08-26                         |
+| Train key over SSH, expiry backstop            | The shared instructions                             | —                                  |
+| Watchdog, heartbeat, claim protocol            | The shared instructions                             | —                                  |
+| Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          | —                                  |
+| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | —                                  |
+| Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | —                                  |
+| CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        | —                                  |
+| Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         | —                                  |
+| Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     | 2026-08-26                         |
+| KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      | 2026-08-26                         |
+| Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | —                                  |
+| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | —                                  |
 
 <a id="lrn-entries"></a>
 
@@ -124,6 +124,42 @@ apply to every entry.
   proves nested KVM on the POP2 range today. It proves nothing about an other
   instance range, and it is not a platform guarantee. Maps to: FuguTTX
   IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9.
+
+### 2026-08-28 — The campaign prerequisites
+
+- **L40S quota by default.** A probe created and deleted one L40S-1-48G server
+  in `fr-par-2`, with no support request. Both declared offers of the train
+  stack now hold a proven quota. Scope: this Organization, this date. Maps to:
+  FuguTTX IAC-TRAIN, FuguTTX IAC-PREREQ.
+- **The train-key mint needs an IAM permission.** The shared instructions say
+  that CI creates the train key at `make infra-up STACK=train`, with the
+  pipeline credential. They do not say that the pipeline policy then needs an
+  IAM write. A probe proved that `IAMApplicationManager` covers api-key create
+  and delete on an application, so the pipeline policy takes that set in its
+  organization-scoped rule. The set also mints keys on the operator application:
+  the narrow-set list of IAC-APPLY-6 accepts that trade, and this gap is a
+  candidate correction for the shared instructions, per LRN-DELIVER-3. Maps to:
+  the shared instructions, FuguTTX D9.
+- **A minted key defaults to the wrong project.** `scw iam api-key create`
+  without `default-project-id` binds the key to the organization default
+  project, and the Object Storage calls of the key then target that project.
+  Every mint must pass `default-project-id`. Maps to: the shared instructions,
+  FuguTTX D9.
+- **The agent billing read passes.** This entry corrects the credential scope
+  drift claim of the 2026-08-25 entry: a consumption read with the agent key
+  passed on 2026-08-28, and the pipeline key read the same data. The 2026-08-25
+  denial did not reproduce, so the drift is closed without a policy change.
+  Scope: one read per key, one day. Maps to: the shared instructions, FuguTTX
+  D9.
+- **The live price moved.** The price read gave EUR 2.8665 per hour for the
+  H100-1-80G, against EUR 2.73 in the earlier table, and EUR 1.4699 for the
+  L40S-1-48G. A recorded price goes stale in weeks: only the pre-apply read
+  counts. Maps to: FuguTTX IAC-PREREQ, the shared instructions.
+- **The lanes and the pairs are in the buckets.** The upload wrote 32,516
+  training-lane records, 22,123 SFT pairs, and 7,009 prose paragraphs to
+  `stx-corpus`, and 4,310 eval sentences to `stx-evalcorpus`, keyed flat with a
+  manifest that records the `r2.18` tag. Maps to: FuguTTX IAC-PERSIST, FuguTTX
+  D6.
 
 <a id="lrn-scope"></a>
 

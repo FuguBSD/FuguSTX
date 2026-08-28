@@ -1,7 +1,7 @@
 # 003 — The first SFT campaign and the tier T1 baseline
 
-- Implements: TRN-INST, TRN-CPT, TRN-SFT, TRN-EXEC, TRN-BUDGET, ENG-SCHEMA
-- Implements: COR-BUCKETS, IAC-APPLY, EVL-TIERS without EVL-TIERS-4
+- Implements: TRN-INST, TRN-CPT, TRN-SFT, TRN-EXEC
+- Implements: IAC-APPLY, EVL-TIERS without EVL-TIERS-4
 - Implements: ENG-SPLIT without ENG-SPLIT-1 without ENG-SPLIT-2
 - Implements: LRN-DELIVER without LRN-DELIVER-2 without LRN-DELIVER-3
 

@@ -9,12 +9,12 @@ FuguTTX TRN-INST.
 
 | Instance   | GPU          | VRAM  | EUR/hour | Role                       |
 | ---------- | ------------ | ----- | -------- | -------------------------- |
-| H100-1-80G | 1× H100 PCIe | 80 GB | 2.73     | Default; hosts the teacher |
-| L40S-1-48G | 1× L40S      | 48 GB | 1.47     | Budget runs, no teacher    |
+| H100-1-80G | 1× H100 PCIe | 80 GB | 2.8665   | Default; hosts the teacher |
+| L40S-1-48G | 1× L40S      | 48 GB | 1.4699   | Budget runs, no teacher    |
 
-Each price in this table is unverified, per the FuguTTX rule. A quota grant is
-per Organization: probe each declared offer before a campaign, and record the
-result in the runbook.
+Each price in this table was read on 2026-08-28, and it goes stale: only the
+pre-apply read of TRN-INST-1 counts. A quota grant is per Organization: probe
+each declared offer before a campaign, and record the result in the runbook.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
@@ -92,8 +92,9 @@ FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
 
 ## The compute budget
 
-The estimates are order-of-magnitude, at the unverified H100 price of EUR 2.73
-per hour. Scaleway documents a minimum of 60 minutes per created resource.
+The estimates are order-of-magnitude, at the H100 price of EUR 2.87 per hour,
+read 2026-08-28. Scaleway documents a minimum of 60 minutes per created
+resource.
 
 | Item                               | GPU-hours | EUR per run |
 | ---------------------------------- | --------- | ----------- |
