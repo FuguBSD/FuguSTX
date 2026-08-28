@@ -247,24 +247,33 @@ sub cmd_price ( $stack, @argv )
 # _consumption():
 #	The month-to-date consumption of this project, in EUR, and the
 #	age of the read, in hours. The billing API is organization
-#	scoped, so the sum filters on the project.
+#	scoped, so the sum filters on the project. The read pages
+#	through the full list: an under-count would pass an apply that
+#	the forecast check must stop.
 sub _consumption ()
 {
-	my $url = 'https://api.scaleway.com/billing/v2beta1/consumptions'
-	    . "?organization_id=$ENV{SCW_DEFAULT_ORGANIZATION_ID}";
-	my $output = _run_or_die(
-		'curl', '-sf',
-		'-H', "X-Auth-Token: $ENV{SCW_SECRET_KEY}", $url,
-	);
-	my $data     = $json->decode($output);
-	my $consumed = 0;
-	for my $item ( @{ $data->{consumptions} // [] } ) {
-		next
-		    unless ( $item->{project_id} // '' ) eq
-		    ( $ENV{SCW_DEFAULT_PROJECT_ID} // '' );
-		$consumed += _money( $item->{value} );
+	my $page_size = 100;
+	my $consumed  = 0;
+	my $updated;
+	for my $page ( 1 .. 100 ) {
+		my $url = 'https://api.scaleway.com/billing/v2beta1/consumptions'
+		    . "?organization_id=$ENV{SCW_DEFAULT_ORGANIZATION_ID}"
+		    . "&page=$page&page_size=$page_size";
+		my $output = _run_or_die(
+			'curl', '-sf',
+			'-H', "X-Auth-Token: $ENV{SCW_SECRET_KEY}", $url,
+		);
+		my $data = $json->decode($output);
+		$updated //= _epoch( $data->{updated_at} );
+		my $items = $data->{consumptions} // [];
+		for my $item (@$items) {
+			next
+			    unless ( $item->{project_id} // '' ) eq
+			    ( $ENV{SCW_DEFAULT_PROJECT_ID} // '' );
+			$consumed += _money( $item->{value} );
+		}
+		last if @$items < $page_size;
 	}
-	my $updated = _epoch( $data->{updated_at} );
 	my $age = defined $updated ? ( time - $updated ) / 3600 : undef;
 
 	return ( $consumed, $age );

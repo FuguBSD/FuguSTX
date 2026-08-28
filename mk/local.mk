@@ -58,17 +58,19 @@ INFRA        = scripts/infra
 TRAIN_OFFER ?= H100-1-80G
 TRAIN_HOURS ?= 4
 
+# The single quotes keep a variable value out of shell syntax: the
+# hours value arrives from a workflow input.
 infra-plan:
 	@test -n "$(STACK)" || { echo "usage: make infra-plan STACK=<name>"; exit 1; }
-	$(INFRA) plan $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+	$(INFRA) plan $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
 
 infra-plan-ro:
 	@test -n "$(STACK)" || { echo "usage: make infra-plan-ro STACK=<name>"; exit 1; }
-	$(INFRA) plan-ro $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+	$(INFRA) plan-ro $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
 
 infra-up:
 	@test -n "$(STACK)" || { echo "usage: make infra-up STACK=<name>"; exit 1; }
-	$(INFRA) up $(STACK) --offer $(TRAIN_OFFER) --hours $(TRAIN_HOURS)
+	$(INFRA) up $(STACK) --offer '$(TRAIN_OFFER)' --hours '$(TRAIN_HOURS)'
 
 infra-down:
 	@test -n "$(STACK)" || { echo "usage: make infra-down STACK=<name>"; exit 1; }
@@ -76,7 +78,7 @@ infra-down:
 
 infra-price:
 	@test -n "$(STACK)" || { echo "usage: make infra-price STACK=<name>"; exit 1; }
-	$(INFRA) price $(STACK) --offer $(TRAIN_OFFER)
+	$(INFRA) price $(STACK) --offer '$(TRAIN_OFFER)'
 
 infra-status:
 	$(INFRA) status

@@ -61,16 +61,20 @@ jobs:
           echo "$PWD/$bin" >> "$GITHUB_PATH"
           echo "LD_LIBRARY_PATH=$PWD/$bin:$PWD/${bin%/bin}/lib" >> "$GITHUB_ENV"
 
-      - name: Fetch the model artifact
+      - name: Fetch the model artifact and the eval lane
         run: |
           aws --endpoint-url https://s3.fr-par.scw.cloud s3 cp \
             "s3://stx-artifacts/runs/$RUN_ID/stx-${{ inputs.name }}.gguf" model.gguf
+          aws --endpoint-url https://s3.fr-par.scw.cloud s3 cp \
+            s3://stx-evalcorpus/eval.jsonl eval.jsonl
 
       - name: Sweep the shard
         run: |
           . train/config.env
           uv run --locked python -m stx_corpus.t1 \
             --split eval \
+            --records eval.jsonl \
+            --label '${{ inputs.name }}' \
             --shard "${{ matrix.shard }}/$SHARDS" \
             --stx "bin/stx label -m model.gguf -t 4" \
             --model model.gguf \

@@ -9,10 +9,13 @@ comparison: the dev split is a score input, never a training input
 
 The stx harness drives every llama.cpp call: this module feeds token
 lists to `bin/stx label` and reads label records back (ENG-SPLIT-4).
+The records come from the uploaded lane files, so the CI jobs and the
+train instance read the buckets, per plan.
 
 The scorecard holds UPOS, lemma, and LAS per treebank, plus the
 llama.cpp version, the thread count, the model hash, the UD release
-tag, and the run identifier.
+tag, and the run identifier. The counting matches the tier T0 scorer
+of `score.py`, and a test proves the agreement.
 """
 
 from __future__ import annotations
@@ -28,8 +31,7 @@ from typing import Any
 
 from . import bucket
 from .fetch import UD_RELEASE_TAG
-from .lanes import Lanes, Record
-from .pipeline import build
+from .lanes import Record, read_records
 
 ARTIFACTS_BUCKET = "stx-artifacts"
 
@@ -38,11 +40,14 @@ ARTIFACTS_BUCKET = "stx-artifacts"
 _COUNTS = ("sentences", "failures", "tokens", "upos", "lemma", "las")
 
 
-def split_records(lanes: Lanes, split: str) -> list[Record]:
+def split_records(records: list[Record], split: str) -> list[Record]:
+    """The score inputs of one split. The eval split holds the test
+    files of the eval lane, and the dev split is a score input only
+    (TRN-SFT-3)."""
     if split == "dev":
-        return [record for record in lanes.training if record.split == "dev"]
+        return [record for record in records if record.split == "dev"]
     if split == "eval":
-        return list(lanes.eval)
+        return [record for record in records if record.split == "test"]
     raise ValueError(f"unknown split: {split}")
 
 
@@ -161,8 +166,11 @@ def aggregate(paths: list[Path]) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="The FuguSTX model sweep.")
     parser.add_argument("--split", choices=("dev", "eval"), default="eval")
+    parser.add_argument("--records", type=Path, help="the lane JSONL file")
     parser.add_argument("--stx", default="bin/stx label")
     parser.add_argument("--model", type=Path)
+    parser.add_argument("--label", default=None, help="the model name, for the key")
+    parser.add_argument("--device", choices=("cpu", "gpu"), default="cpu")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--llama-version", required=True)
     parser.add_argument("--threads", type=int, default=4)
@@ -175,15 +183,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.aggregate:
         card = aggregate(args.aggregate)
     else:
-        if args.model is None:
-            parser.error("--model is required outside --aggregate")
-        records = shard_records(split_records(build(), args.split), args.shard)
+        if args.model is None or args.records is None:
+            parser.error("--model and --records are required outside --aggregate")
+        records = shard_records(split_records(read_records(args.records), args.split), args.shard)
         replies = label_records(records, args.stx)
         card = scorecard(
             score_replies(records, replies),
             {
                 "split": args.split,
                 "run_id": args.run_id,
+                "label": args.label,
+                "device": args.device,
                 "model_hash": sha256_file(args.model),
                 "llama_version": args.llama_version,
                 "threads": args.threads,
@@ -198,11 +208,12 @@ def main(argv: list[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(text, encoding="utf-8")
     if args.upload:
+        label = f"-{card['label']}" if card.get("label") else ""
         shard = f"-shard{args.shard.replace('/', 'of')}" if args.shard else ""
         key = (
-            f"runs/{card['run_id']}/scorecard-t1.json"
+            f"runs/{card['run_id']}/scorecard-t1{label}.json"
             if args.aggregate
-            else f"runs/{card['run_id']}/scorecard-{args.split}{shard}.json"
+            else f"runs/{card['run_id']}/scorecard-{args.split}{label}{shard}.json"
         )
         bucket.put_text(ARTIFACTS_BUCKET, key, text)
         print(f"upload: s3://{ARTIFACTS_BUCKET}/{key}")

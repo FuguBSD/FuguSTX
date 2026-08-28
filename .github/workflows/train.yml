@@ -39,13 +39,6 @@ on:
         options:
           - sft-base
           - sft-cpt
-      split:
-        description: The split for score
-        type: choice
-        default: dev
-        options:
-          - dev
-          - eval
 
 # One concurrency group serializes each train stack change. A
 # cancelled apply can orphan a billed resource.
@@ -79,6 +72,12 @@ jobs:
           make deps
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Check the hours input
+        run: |
+          case "$TRAIN_HOURS_INPUT" in
+            ''|*[!0-9.]*) echo "the hours input must be a number"; exit 1;;
+          esac
+
       - name: Write the campaign SSH key
         run: |
           mkdir -p ~/.ssh
@@ -111,10 +110,12 @@ jobs:
         if: inputs.action == 'gguf'
         run: scripts/train gguf --name ${{ inputs.name }}
 
-      - name: Score a split
+      # The dev split only: the eval lane stays in the gated CPU sweep
+      # of tier T1 (EVL-TIERS-3).
+      - name: Score the dev split
         if: inputs.action == 'score'
         run: |
-          scripts/train score --name '${{ inputs.name }}' --split '${{ inputs.split }}'
+          scripts/train score --name '${{ inputs.name }}'
 
       - name: Promote the artifact
         if: inputs.action == 'promote'

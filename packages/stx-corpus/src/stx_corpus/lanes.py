@@ -5,9 +5,11 @@ Implements corpus.md COR-LANES-1 through COR-LANES-4.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
-from .conllu import Sentence
+from .conllu import Sentence, Token
 
 
 class LaneLeakageError(RuntimeError):
@@ -58,6 +60,18 @@ def build_lanes(
     lanes = Lanes(tuple(training), tuple(holdout))
     assert_no_leakage(lanes)
     return lanes
+
+
+def read_records(path: Path) -> list[Record]:
+    """Read lane records from the JSONL shape that the pipeline writes."""
+    records: list[Record] = []
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            data = json.loads(line)
+            tokens = tuple(Token(**token) for token in data["tokens"])
+            sentence = Sentence(data["sent_id"], data["text"], tokens, data.get("doc_id"))
+            records.append(Record(data["source"], data["split"], data["tag"], sentence))
+    return records
 
 
 def assert_no_leakage(lanes: Lanes) -> None:

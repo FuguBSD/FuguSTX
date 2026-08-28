@@ -58,8 +58,8 @@ policy scopes to it. A wrong value retargets the whole stack.
 A probe on 2026-08-25 tested the agent key. The key creates dev, train, and
 image resource types. The platform denied it the consumption read on that date.
 A probe on 2026-08-28 read the consumption with the same key, so the drift is
-closed: the `stx.prod.full` policy holds `BillingManager` at organization scope,
-and the read passes.
+closed. The console-made policy of the `stx.prod.claude` application carries the
+name `stx.prod.full`, and it holds `BillingManager` at organization scope.
 
 A probe on 2026-08-28 tested the delegation path of the pipeline key. The
 workspace operator key created and deleted an api-key on `stx.prod.pipeline`.
@@ -91,8 +91,8 @@ Two human steps stay open:
    policy, and move the three secrets and the two variables into it. Until then,
    the repository scope serves the same workflows.
 
-The live prices, read 2026-08-28 in `fr-par-2`: H100-1-80G at EUR 2.8665 per
-hour, and L40S-1-48G at EUR 1.4699 per hour.
+The price table of [training.md](../../spec/training.md#trn-inst) holds the
+2026-08-28 price read.
 
 ## A change to the stack
 

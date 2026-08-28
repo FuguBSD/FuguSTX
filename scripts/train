@@ -22,7 +22,7 @@
 #        train merge-cpt
 #        train sft-base | train sft-cpt
 #        train gguf --name sft-base|sft-cpt
-#        train score --name NAME [--split dev]
+#        train score --name NAME
 #        train promote --name NAME
 #
 # Each verb copies the tracked repository files to the instance, and
@@ -46,7 +46,7 @@ usage: train cpt
        train merge-cpt
        train sft-base | train sft-cpt
        train gguf --name sft-base|sft-cpt
-       train score --name NAME [--split dev]
+       train score --name NAME
        train promote --name NAME
 EOF
 
@@ -131,12 +131,8 @@ sub _uv ()
 sub main (@argv)
 {
 	my $verb = shift @argv // die $USAGE;
-	my ( $name, $split ) = ( undef, 'dev' );
-	GetOptionsFromArray(
-		\@argv,
-		'name=s'  => \$name,
-		'split=s' => \$split,
-	) or die $USAGE;
+	my $name;
+	GetOptionsFromArray( \@argv, 'name=s' => \$name ) or die $USAGE;
 
 	my $ip = _ip();
 	_push($ip);
@@ -176,17 +172,26 @@ sub main (@argv)
 	}
 	if ( $verb eq 'score' ) {
 		die $USAGE unless defined $name;
+
+		# The dev split only: the synced training.jsonl holds it,
+		# and the eval lane stays in the gated CPU sweep of tier
+		# T1. The server runs on the GPU, because the instance
+		# bills per minute; decision T2 binds the shipped engine
+		# and the tier T1 gate, and both stay on the CPU. The
+		# scorecard records the device.
 		_remote( $ip,
 			      "scripts/train-driver serve --model /scratch/gguf/$name.gguf && "
 			    . _uv() . ' && '
 			    . 'mkdir -p /scratch/scorecards && '
 			    . 'uv run --locked python -m stx_corpus.t1 '
-			    . "--split $split "
+			    . '--split dev '
+			    . '--records /scratch/corpus/training.jsonl '
 			    . q{--stx 'bin/stx label --server http://127.0.0.1:8080' }
 			    . "--model /scratch/gguf/$name.gguf "
+			    . "--label $name --device gpu "
 			    . '--run-id "$STX_RUN_ID" '
 			    . '--llama-version "$LLAMA_VERSION" '
-			    . "--out /scratch/scorecards/$name-$split.json "
+			    . "--out /scratch/scorecards/$name-dev.json "
 			    . '--upload; '
 			    . 'status=$?; scripts/train-driver serve-stop; '
 			    . 'exit $status' );

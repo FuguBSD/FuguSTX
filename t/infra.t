@@ -41,6 +41,7 @@ say $log "scw @ARGV";
 close $log;
 my $argv = "@ARGV";
 sub emit ($path) { open my $fh, '<', $path or die $!; print <$fh>; exit 0 }
+emit("$ENV{STX_FIX}/server-types.json") if $argv =~ /server-type list/;
 if ( $argv =~ /instance server list/ ) {
 	if ( -f "$ENV{STX_STATE}/destroyed" ) { say '[]'; exit 0 }
 	emit("$ENV{STX_FIX}/servers.json");
@@ -164,6 +165,27 @@ my %train_tags = (
 	'stx:lifecycle' => 'ephemeral',
 	'stx:run-id'    => 'run-1',
 );
+
+subtest 'the price read parses the units and nanos money shape' => sub {
+
+	# The shape comes from a live read of 2026-08-28.
+	my ( $output, $status ) = _run(
+		'price train --offer H100-1-80G',
+		fixtures => {
+			'server-types.json' =>
+			    '[{"name":"H100-1-80G","hourly_price":'
+			    . '{"currency_code":"EUR","units":2,"nanos":866500000}}]',
+		},
+	);
+	is( $status, 0, 'exit 0' );
+	like( $output, qr/EUR 2\.8665 per hour/, 'the parsed price' );
+};
+
+subtest 'a stack without compute prices nothing' => sub {
+	my ( $output, $status ) = _run( 'price persistent', fixtures => {} );
+	is( $status, 0, 'exit 0' );
+	like( $output, qr/declares no compute/, 'the reason' );
+};
 
 subtest 'the forecast check goes under the budget' => sub {
 	my ( $output, $status ) = _run(

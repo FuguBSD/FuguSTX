@@ -22,6 +22,7 @@
 #        train-driver heartbeat once|start|stop
 #        train-driver sync-corpus
 #        train-driver train --config FILE
+#        train-driver sync-checkpoints --config FILE
 #        train-driver merge --config FILE --lora DIR --output DIR
 #        train-driver gguf --input DIR --output FILE
 #        train-driver serve --model FILE
@@ -56,6 +57,7 @@ usage: train-driver claim
        train-driver heartbeat once|start|stop
        train-driver sync-corpus
        train-driver train --config FILE
+       train-driver sync-checkpoints --config FILE
        train-driver merge --config FILE --lora DIR --output DIR
        train-driver gguf --input DIR --output FILE
        train-driver serve --model FILE
@@ -228,10 +230,12 @@ sub cmd_sync_corpus ()
 	return 0;
 }
 
-# _config_value($path, $key):
-#	One scalar value of an Axolotl configuration file.
-sub _config_value ( $path, $key )
+# _config_value($config, $key):
+#	One scalar value of an Axolotl configuration file. The path is
+#	relative to the repository root, or absolute.
+sub _config_value ( $config, $key )
 {
+	my $path = $config =~ m{^/} ? $config : "$ROOT/$config";
 	open my $fh, '<', $path or die "train-driver: read $path: $!\n";
 	my ($value) = map { /^\Q$key\E:\s*(\S+)/ ? $1 : () } <$fh>;
 	close $fh;
@@ -281,7 +285,7 @@ sub cmd_train (@argv)
 	my $config;
 	GetOptionsFromArray( \@argv, 'config=s' => \$config ) or die $USAGE;
 	die $USAGE unless defined $config;
-	my $output_dir = _config_value( "$ROOT/$config", 'output_dir' );
+	my $output_dir = _config_value( $config, 'output_dir' );
 
 	cmd_claim();
 	cmd_heartbeat('start');
@@ -304,12 +308,24 @@ sub cmd_train (@argv)
 	waitpid $watcher, 0;
 	_sync_checkpoints($output_dir);
 
-	# The heartbeat stops with the run. The 20-minute idle window of
-	# the watchdog covers the gap to the next campaign step.
+	# The heartbeat stops with the run. An idle stack then reaps
+	# after 20 minutes, and Object Storage holds every checkpoint,
+	# so a reap between campaign steps loses no durable data.
 	cmd_heartbeat('stop');
 	die "train-driver: the training run failed with status $status\n"
 	    if $status;
 	say "train: $config is done, checkpoints are in Object Storage";
+
+	return 0;
+}
+
+sub cmd_sync_checkpoints (@argv)
+{
+	my $config;
+	GetOptionsFromArray( \@argv, 'config=s' => \$config ) or die $USAGE;
+	die $USAGE unless defined $config;
+	_sync_checkpoints( _config_value( $config, 'output_dir' ) );
+	say 'sync-checkpoints: the checkpoints are in Object Storage';
 
 	return 0;
 }
@@ -442,6 +458,8 @@ sub main (@argv)
 	    if $command eq 'heartbeat';
 	return cmd_sync_corpus()         if $command eq 'sync-corpus';
 	return cmd_train(@argv)          if $command eq 'train';
+	return cmd_sync_checkpoints(@argv)
+	    if $command eq 'sync-checkpoints';
 	return cmd_merge(@argv)          if $command eq 'merge';
 	return cmd_gguf(@argv)           if $command eq 'gguf';
 	return cmd_serve(@argv)          if $command eq 'serve';

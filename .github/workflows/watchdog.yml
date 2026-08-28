@@ -8,10 +8,12 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
 
-# The watchdog can destroy the train stack, so it shares the train
-# concurrency group.
+# The watchdog holds its own group: a running train job must not block
+# the stx:expires backstop for hours, and a queued campaign dispatch
+# must not lose its slot to a schedule. A destroy under a running apply
+# waits on the state lock, so the two groups stay safe.
 concurrency:
-  group: infra-train
+  group: infra-watchdog
   cancel-in-progress: false
 
 jobs:

@@ -12,9 +12,10 @@ FuguTTX TRN-INST.
 | H100-1-80G | 1× H100 PCIe | 80 GB | 2.8665   | Default; hosts the teacher |
 | L40S-1-48G | 1× L40S      | 48 GB | 1.4699   | Budget runs, no teacher    |
 
-Each price in this table was read on 2026-08-28, and it goes stale: only the
-pre-apply read of TRN-INST-1 counts. A quota grant is per Organization: probe
-each declared offer before a campaign, and record the result in the runbook.
+The 2026-08-28 price read fills this table, and a table price goes stale: only
+the pre-apply read of TRN-INST-1 counts. A quota grant is per Organization:
+probe each declared offer before a campaign, and record the result in the
+runbook.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
@@ -100,7 +101,7 @@ resource.
 | ---------------------------------- | --------- | ----------- |
 | SFT pass (0.6B, QLoRA)             | 1–2       | 3–6         |
 | CPT rehearsal pass                 | 1–2       | 3–6         |
-| Teacher campaign (Qwen3-32B, vLLM) | 5–15      | 14–41       |
+| Teacher campaign (Qwen3-32B, vLLM) | 5–15      | 14–43       |
 | Artifact suite sweep (dev host)    | —         | 1–3         |
 
 The last row prices [the artifact suite](evaluation.md#evl-suite) sweep on

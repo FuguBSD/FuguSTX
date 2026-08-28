@@ -21,8 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import schema
-from .conllu import Sentence, Token
-from .lanes import Lanes, Record
+from .lanes import Lanes, Record, read_records
 from .pipeline import build
 
 #: The sources that carry treebank annotations. The prose lane carries
@@ -90,14 +89,7 @@ def write_pairs(pairs: list[Pair], path: Path) -> None:
 
 def read_augmentation(path: Path) -> list[Record]:
     """Read accepted augmentation records, in the lane JSONL shape."""
-    records: list[Record] = []
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            data = json.loads(line)
-            tokens = tuple(Token(**token) for token in data["tokens"])
-            sentence = Sentence(data["sent_id"], data["text"], tokens, data.get("doc_id"))
-            records.append(Record(data["source"], data["split"], data["tag"], sentence))
-    return records
+    return read_records(path)
 
 
 def main(argv: list[str] | None = None) -> int:

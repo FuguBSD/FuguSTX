@@ -109,6 +109,43 @@ subtest 'the heartbeat writes the run key' => sub {
 	like( $calls->[0], qr/\x{1}PUT\x{1}/, 'a PUT write' );
 };
 
+subtest 'a checkpoint key carries the run identifier and the step' => sub {
+
+	# COR-BUCKETS-3. A stub aws logs the sync call of each
+	# checkpoint directory.
+	open my $aws, '>', "$stub/aws" or die $!;
+	print $aws <<'AWS';
+#!/usr/bin/env perl
+use v5.36;
+open my $log, '>>', $ENV{STX_STUB_LOG} or die $!;
+say $log "aws @ARGV";
+close $log;
+AWS
+	close $aws;
+	chmod 0755, "$stub/aws";
+
+	my $outputs = "$dir/outputs/sft-base";
+	system( 'mkdir', '-p', "$outputs/checkpoint-100",
+		"$outputs/checkpoint-200" ) == 0
+	    or die $!;
+	open my $config, '>', "$dir/sync.yml" or die $!;
+	print $config "output_dir: $outputs\n";
+	close $config;
+
+	my ( $output, $status, $calls ) = _driver(
+		"sync-checkpoints --config $dir/sync.yml",
+		name => 'sync',
+	);
+	is( $status, 0, 'exit 0' );
+	my @syncs = grep { /^aws / } @$calls;
+	is( scalar @syncs, 2, 'one sync per checkpoint' );
+	like(
+		$syncs[0],
+		qr{s3://stx-checkpoints/runs/run-1/sft-base/checkpoint-100},
+		'the key holds the run identifier and the step number'
+	);
+};
+
 subtest 'the heartbeat writer repeats on its interval' => sub {
 	my $log = "$dir/calls-loop.log";
 	open my $init, '>', $log or die $!;

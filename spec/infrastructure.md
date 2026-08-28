@@ -36,7 +36,9 @@ applies these rules first, so FuguTTX inherits tested rules
   sets of that rule are acceptable at organization scope. The pipeline rule can
   hold `IAMApplicationManager`: the train-credential flow of the synced
   instructions mints and deletes the train key at stack up and down, and
-  Scaleway offers no narrower set for an api-key write.
+  Scaleway offers no narrower set for an api-key write. The set reaches every
+  application, the operator application included. The key rotation and the key
+  expiry bound that reach.
 - **IAC-APPLY-7** — Each principal that applies `infra/persistent` must hold the
   operator scope. The state-bucket policy must name each one. An agent
   application can be such a principal, as an exception to the smallest-scope
