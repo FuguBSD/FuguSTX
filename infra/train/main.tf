@@ -5,10 +5,13 @@
 
 # The GPU OS image, resolved by marketplace label, never by UUID. The
 # image supplies the NVIDIA driver, Docker, and the NVIDIA container
-# toolkit.
+# toolkit. The image_type must be instance_sbs: the default variant
+# carries an l_ssd snapshot, and the platform refuses it on the SBS
+# root volume (probed 2026-08-28).
 data "scaleway_marketplace_image" "gpu_os" {
   label         = "ubuntu_noble_gpu_os_13_nvidia"
   instance_type = var.instance_type
+  image_type    = "instance_sbs"
 }
 
 # Scaleway bills a reserved IPv4, attached or not. The destroy must
