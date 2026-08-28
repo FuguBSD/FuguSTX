@@ -1,0 +1,35 @@
+# The SFT pass from the CPT output (decision T4). The driver merges
+# the CPT adapter into /scratch/outputs/cpt-merged first, and this run
+# starts from that model. The dev-split comparison against the
+# sft-base run decides TRN-CPT-2.
+base_model: /scratch/outputs/cpt-merged
+
+load_in_4bit: true
+adapter: qlora
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_linear: true
+
+datasets:
+  - path: /scratch/corpus/pairs.jsonl
+    type: input_output
+dataset_prepared_path: /scratch/prepared/sft-cpt
+output_dir: /scratch/outputs/sft-cpt
+
+sequence_len: 2048
+sample_packing: true
+micro_batch_size: 8
+gradient_accumulation_steps: 2
+
+num_epochs: 2
+learning_rate: 0.0002
+lr_scheduler: cosine
+warmup_ratio: 0.03
+optimizer: adamw_torch
+
+bf16: true
+tf32: true
+gradient_checkpointing: true
+logging_steps: 10
+saves_per_epoch: 1

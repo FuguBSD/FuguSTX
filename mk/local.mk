@@ -89,3 +89,15 @@ infra-watchdog:
 .PHONY: infra-fmt-check infra-validate infra-check infra-bootstrap
 .PHONY: infra-plan infra-plan-ro infra-up infra-down infra-price
 .PHONY: infra-status infra-cost infra-watchdog
+
+# The training runs (TRN-EXEC-3), against a provisioned instance.
+# SFT_FROM selects the SFT start point: base, or cpt (decision T4).
+SFT_FROM ?= base
+
+train-cpt:
+	scripts/train cpt
+
+train-sft:
+	scripts/train sft-$(SFT_FROM)
+
+.PHONY: train-cpt train-sft

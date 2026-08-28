@@ -124,4 +124,56 @@ subtest 'an input without a tokens list is refused' => sub {
 	isnt( $status, 0, 'exit non-zero' );
 };
 
+subtest 'the server transport posts the grammar and greedy decoding' => sub {
+
+	# A stub curl on the PATH answers as llama-server: it reads the
+	# request body, and it labels each token line of the prompt.
+	my $bin = "$dir/serverbin";
+	mkdir $bin or die $!;
+	open my $curl, '>', "$bin/curl" or die $!;
+	print $curl <<'CURL';
+#!/usr/bin/env perl
+use v5.36;
+use JSON::PP ();
+my %options;
+my @argv = @ARGV;
+while (@argv) {
+	my $flag = shift @argv;
+	$options{$flag} = @argv && $argv[0] !~ /^-/ ? shift @argv : 1;
+}
+open my $log, '>', $ENV{STX_STUB_LOG} or die $!;
+print $log $options{'-d'};
+close $log;
+my $request = JSON::PP->new->decode( $options{'-d'} );
+my $content = '';
+for my $line ( grep { length } split /\n/, $request->{prompt} ) {
+	my ( $index, $form ) = split /\t/, $line;
+	$content .= "NOUN\t$form\t0\troot\t_\n";
+}
+print JSON::PP->new->encode( { content => $content } );
+CURL
+	close $curl;
+	chmod 0755, "$bin/curl";
+
+	my $infile = "$dir/server-input.jsonl";
+	open my $in, '>', $infile or die $!;
+	print $in $request;
+	close $in;
+	local $ENV{PATH}         = "$bin:$ENV{PATH}";
+	local $ENV{STX_STUB_LOG} = "$dir/server.log";
+	my $out =
+	    qx{$^X $root/bin/stx label -s http://127.0.0.1:8080 < $infile};
+	is( $? >> 8, 0, 'exit 0' );
+	my $reply = $json->decode($out);
+	is( scalar @{ $reply->{labels} }, 2, 'one record per token' );
+
+	open my $log, '<', "$dir/server.log" or die $!;
+	local $/ = undef;
+	my $body = $json->decode(<$log>);
+	close $log;
+	is( $body->{temperature}, 0, 'greedy decoding' );
+	like( $body->{grammar}, qr/^root ::= record\+$/m,
+		'the committed grammar rides in the request' );
+};
+
 done_testing();

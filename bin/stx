@@ -19,6 +19,7 @@
 # stx: the FuguSTX harness (decision T7).
 #
 # usage: stx label -m MODEL [-g GRAMMAR] [-t THREADS] [-n MAX] [-l CMD]
+#        stx label -s URL [-g GRAMMAR] [-n MAX]
 #
 # The label command reads one JSON object per line on stdin, with the
 # shape {"tokens": ["From", "Friday"]}. For each object it runs one
@@ -30,10 +31,12 @@
 # schema gives the model no offset field (ENG-SPLIT-3). The grammar
 # file share/annotation.gbnf states the serialization (ENG-SCHEMA-1).
 #
-# The llama.cpp command is `llama-cli`. The STX_LLAMA environment
-# variable or the -l option overrides it, and the tests use that for a
-# stub. The option value splits on spaces, so a stub can be
-# "perl stub.pl".
+# Two transports reach llama.cpp. The exec transport runs `llama-cli`
+# once per sentence; the STX_LLAMA environment variable or the -l
+# option overrides the command, and the tests use that for a stub. The
+# option value splits on spaces, so a stub can be "perl stub.pl". The
+# server transport posts to one warm llama-server (-s URL), and the
+# campaign uses it on the train instance.
 #
 # Like scripts/deps, core modules only, and v5.34 for macOS.
 
@@ -47,7 +50,8 @@ use Getopt::Long   qw(GetOptionsFromArray);
 use JSON::PP       ();
 
 my $USAGE =
-    "usage: stx label -m MODEL [-g GRAMMAR] [-t THREADS] [-n MAX] [-l CMD]\n";
+      "usage: stx label -m MODEL [-g GRAMMAR] [-t THREADS] [-n MAX] [-l CMD]\n"
+    . "       stx label -s URL [-g GRAMMAR] [-n MAX]\n";
 
 my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
 
@@ -111,11 +115,39 @@ sub _parse_labels ($output, $count)
 	return ( \@records, undef );
 }
 
+# _post_server($json, $server, $grammar_text, $prompt, $max):
+#	One llama-server completion call, through curl, with greedy
+#	decoding under the grammar. Return the generated text.
+sub _post_server ( $json, $server, $grammar_text, $prompt, $max )
+{
+	my $body = $json->encode(
+		{
+			prompt       => $prompt,
+			grammar      => $grammar_text,
+			temperature  => 0,
+			n_predict    => $max,
+			cache_prompt => JSON::PP::false,
+		}
+	);
+	my $reply = _run_llama(
+		[
+			'curl', '-sf',
+			'-H', 'Content-Type: application/json',
+			'-d', $body, "$server/completion",
+		]
+	);
+	my $decoded = eval { $json->decode($reply) };
+	die "stx: the server reply is not JSON\n" unless ref $decoded eq 'HASH';
+
+	return $decoded->{content} // '';
+}
+
 # label(@argv):
 #	The label command. One llama.cpp call per input line.
 sub label (@argv)
 {
 	my $model;
+	my $server;
 	my $grammar = "$ROOT/share/annotation.gbnf";
 	my $threads = 4;
 	my $max     = 2048;
@@ -123,13 +155,22 @@ sub label (@argv)
 	GetOptionsFromArray(
 		\@argv,
 		'model|m=s'      => \$model,
+		'server|s=s'     => \$server,
 		'grammar|g=s'    => \$grammar,
 		'threads|t=i'    => \$threads,
 		'max-tokens|n=i' => \$max,
 		'llama|l=s'      => \$llama,
 	) or die $USAGE;
-	die $USAGE unless defined $model && !@argv;
+	die $USAGE unless ( defined $model xor defined $server ) && !@argv;
 	die "stx: no grammar file: $grammar\n" unless -f $grammar;
+
+	my $grammar_text = '';
+	if ( defined $server ) {
+		open my $fh, '<', $grammar or die "stx: read $grammar: $!\n";
+		local $/ = undef;
+		$grammar_text = <$fh>;
+		close $fh;
+	}
 
 	my $json = JSON::PP->new->canonical;
 	while ( my $line = <STDIN> ) {
@@ -142,19 +183,28 @@ sub label (@argv)
 		    && @$tokens
 		    && !grep { !defined || ref } @$tokens;
 
-		my @argv_llama = (
-			( split ' ', $llama ),
-			'-m'             => $model,
-			'--grammar-file' => $grammar,
-			'--threads'      => $threads,
-			'-n'             => $max,
-			'--temp'         => 0,
-			'-no-cnv',
-			'--no-display-prompt',
-			'-p' => _prompt($tokens),
-		);
+		my $prompt = _prompt($tokens);
+		my $output;
+		if ( defined $server ) {
+			$output = _post_server( $json, $server, $grammar_text,
+				$prompt, $max );
+		}
+		else {
+			my @argv_llama = (
+				( split ' ', $llama ),
+				'-m'             => $model,
+				'--grammar-file' => $grammar,
+				'--threads'      => $threads,
+				'-n'             => $max,
+				'--temp'         => 0,
+				'-no-cnv',
+				'--no-display-prompt',
+				'-p' => $prompt,
+			);
+			$output = _run_llama( \@argv_llama );
+		}
 		my ( $labels, $reason ) =
-		    _parse_labels( _run_llama( \@argv_llama ), scalar @$tokens );
+		    _parse_labels( $output, scalar @$tokens );
 		say $json->encode(
 			  defined $labels
 			? { labels => $labels }

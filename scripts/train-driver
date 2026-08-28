@@ -1,0 +1,435 @@
+#!/usr/bin/env perl
+# ex:ts=8 sw=4:
+# $OpenBSD$
+#
+# Copyright (c) 2026 Dick Olsson <hi@senzilla.io>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# train-driver: the training driver, on the train instance.
+#
+# usage: train-driver claim
+#        train-driver heartbeat once|start|stop
+#        train-driver sync-corpus
+#        train-driver train --config FILE
+#        train-driver merge --config FILE --lora DIR --output DIR
+#        train-driver gguf --input DIR --output FILE
+#        train-driver serve --model FILE
+#        train-driver serve-stop
+#        train-driver put --file FILE --key KEY [--bucket NAME]
+#
+# The driver claims the stack once, with an If-None-Match conditional
+# write, and it writes the heartbeat every 60 seconds, per the shared
+# spend guardrails. It synchronizes each checkpoint to Object Storage
+# during a training run (TRN-EXEC-4), and a checkpoint key carries the
+# run identifier and the step number (COR-BUCKETS-3).
+#
+# The credentials come from /root/stx-train.env, which CI delivers
+# over SSH after boot. The pins come from train/config.env. The tests
+# override the environment file with STX_TRAIN_ENV, the intervals with
+# STX_HEARTBEAT_INTERVAL and STX_SYNC_INTERVAL, and the claim marker
+# with STX_CLAIM_MARKER.
+#
+# Like scripts/deps, core modules only, and v5.34.
+
+use v5.34;
+use warnings;
+use experimental 'signatures';
+
+use File::Basename qw(basename dirname);
+use File::Spec     ();
+use Getopt::Long   qw(GetOptionsFromArray);
+use Time::HiRes    ();
+
+my $USAGE = <<'EOF';
+usage: train-driver claim
+       train-driver heartbeat once|start|stop
+       train-driver sync-corpus
+       train-driver train --config FILE
+       train-driver merge --config FILE --lora DIR --output DIR
+       train-driver gguf --input DIR --output FILE
+       train-driver serve --model FILE
+       train-driver serve-stop
+       train-driver put --file FILE --key KEY [--bucket NAME]
+EOF
+
+my $ROOT     = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+my $REGION   = 'fr-par';
+my $ENDPOINT = 's3.fr-par.scw.cloud';
+
+# _env_file($path):
+#	Read one KEY=VALUE environment file into %ENV.
+sub _env_file ($path)
+{
+	open my $fh, '<', $path or die "train-driver: read $path: $!\n";
+	while ( my $line = <$fh> ) {
+		chomp $line;
+		next if $line =~ /^\s*(?:#|\z)/;
+		my ( $key, $value ) = split /=/, $line, 2;
+		$ENV{$key} = $value;
+	}
+	close $fh;
+
+	return;
+}
+
+_env_file( $ENV{STX_TRAIN_ENV} // '/root/stx-train.env' );
+_env_file("$ROOT/train/config.env");
+
+my $RUN_ID = $ENV{STX_RUN_ID} or die "train-driver: STX_RUN_ID is not set\n";
+my $HEARTBEAT_URL = "https://$ENV{CHECKPOINT_BUCKET}.$ENDPOINT/"
+    . "$ENV{HEARTBEAT_PREFIX}/$RUN_ID/heartbeat";
+my $CLAIM_URL = "https://$ENV{CHECKPOINT_BUCKET}.$ENDPOINT/"
+    . "$ENV{HEARTBEAT_PREFIX}/$RUN_ID/claim";
+my $CLAIM_MARKER = $ENV{STX_CLAIM_MARKER} // '/scratch/.stx-claimed';
+my $PID_FILE     = $ENV{STX_HEARTBEAT_PID} // '/tmp/stx-heartbeat.pid';
+
+# _run(@argv):
+#	Run one command without a shell. Return the standard output and
+#	the exit status.
+sub _run (@argv)
+{
+	my $pid = open my $fh, '-|', @argv
+	    or die "train-driver: run $argv[0]: $!\n";
+	local $/ = undef;
+	my $output = <$fh>;
+	close $fh;
+
+	return ( $output // '', $? >> 8 );
+}
+
+sub _run_or_die (@argv)
+{
+	my ( $output, $status ) = _run(@argv);
+	die "train-driver: '$argv[0]' failed with status $status\n" if $status;
+
+	return $output;
+}
+
+# _s3_put($url, $body, @headers):
+#	One SigV4 PUT with curl. Return the HTTP status code.
+sub _s3_put ( $url, $body, @headers )
+{
+	my ( $output, $status ) = _run(
+		'curl', '-s',
+		'-o', '/dev/null', '-w', '%{http_code}',
+		'--aws-sigv4', "aws:amz:$REGION:s3",
+		'--user', "$ENV{SCW_ACCESS_KEY}:$ENV{SCW_SECRET_KEY}",
+		'-X', 'PUT', '--data-binary', $body,
+		( map { ( '-H', $_ ) } @headers ),
+		$url,
+	);
+	die "train-driver: curl $url failed with status $status\n" if $status;
+
+	return $output;
+}
+
+# cmd_claim():
+#	Claim the stack once, with an If-None-Match conditional write.
+#	A second claim of the same run fails on the platform, so a
+#	local marker keeps the claim idempotent inside one instance.
+sub cmd_claim ()
+{
+	if ( -f $CLAIM_MARKER ) {
+		say "claim: run $RUN_ID holds the stack";
+		return 0;
+	}
+	my $code =
+	    _s3_put( $CLAIM_URL, "$RUN_ID " . time, 'If-None-Match: *' );
+	die "train-driver: the stack is claimed already (HTTP $code)\n"
+	    if $code == 412 || $code == 409;
+	die "train-driver: the claim failed with HTTP $code\n"
+	    unless $code == 200;
+	open my $fh, '>', $CLAIM_MARKER
+	    or die "train-driver: write $CLAIM_MARKER: $!\n";
+	print $fh $RUN_ID;
+	close $fh;
+	say "claim: run $RUN_ID took the stack";
+
+	return 0;
+}
+
+# _heartbeat_once():
+#	One heartbeat write. The watchdog reads its age.
+sub _heartbeat_once ()
+{
+	my $code = _s3_put( $HEARTBEAT_URL, "$RUN_ID " . time );
+	die "train-driver: the heartbeat failed with HTTP $code\n"
+	    unless $code == 200;
+
+	return;
+}
+
+sub cmd_heartbeat ($mode)
+{
+	my $interval = $ENV{STX_HEARTBEAT_INTERVAL} // 60;
+	if ( $mode eq 'once' ) {
+		_heartbeat_once();
+		return 0;
+	}
+	if ( $mode eq 'stop' ) {
+		open my $fh, '<', $PID_FILE or return 0;
+		my $pid = <$fh>;
+		close $fh;
+		kill 'TERM', $pid if $pid;
+		unlink $PID_FILE;
+		return 0;
+	}
+	die $USAGE unless $mode eq 'start';
+	if ( -f $PID_FILE ) {
+		say 'heartbeat: a writer runs already';
+		return 0;
+	}
+	my $pid = fork // die "train-driver: fork: $!\n";
+	if ( $pid == 0 ) {
+
+		# Detach from the caller: an SSH session or a pipe reads
+		# until the last writer closes its end.
+		open STDIN,  '<', '/dev/null' or die $!;
+		open STDOUT, '>', '/dev/null' or die $!;
+		open STDERR, '>', '/dev/null' or die $!;
+		while (1) {
+			eval { _heartbeat_once() };
+			Time::HiRes::sleep($interval);
+		}
+	}
+	open my $fh, '>', $PID_FILE
+	    or die "train-driver: write $PID_FILE: $!\n";
+	print $fh $pid;
+	close $fh;
+	say "heartbeat: writer $pid writes every $interval second(s)";
+
+	return 0;
+}
+
+# _aws(@args):
+#	One S3 client call against the Scaleway endpoint.
+sub _aws (@args)
+{
+	return _run_or_die( 'aws', '--endpoint-url', "https://$ENDPOINT",
+		's3', @args );
+}
+
+sub cmd_sync_corpus ()
+{
+	_aws( 'sync', "s3://$ENV{CORPUS_BUCKET}/", '/scratch/corpus/' );
+	say 'sync-corpus: the corpus is on the scratch volume';
+
+	return 0;
+}
+
+# _config_value($path, $key):
+#	One scalar value of an Axolotl configuration file.
+sub _config_value ( $path, $key )
+{
+	open my $fh, '<', $path or die "train-driver: read $path: $!\n";
+	my ($value) = map { /^\Q$key\E:\s*(\S+)/ ? $1 : () } <$fh>;
+	close $fh;
+	die "train-driver: no $key in $path\n" unless defined $value;
+
+	return $value;
+}
+
+# _sync_checkpoints($output_dir):
+#	Push each checkpoint to Object Storage. The key carries the run
+#	identifier and the step number (COR-BUCKETS-3).
+sub _sync_checkpoints ($output_dir)
+{
+	my $name = basename($output_dir);
+	for my $checkpoint ( sort glob "$output_dir/checkpoint-*" ) {
+		next unless -d $checkpoint;
+		my $step = basename($checkpoint);
+		_aws(
+			'sync', $checkpoint,
+			"s3://$ENV{CHECKPOINT_BUCKET}/$ENV{HEARTBEAT_PREFIX}/"
+			    . "$RUN_ID/$name/$step",
+		);
+	}
+
+	return;
+}
+
+# _docker_train($config):
+#	One Axolotl run in the published CUDA image (TRN-EXEC-1). The
+#	repository mounts read-only; every path a run writes lives on
+#	the scratch volume.
+sub _docker_train ($config)
+{
+	return (
+		'docker', 'run', '--rm', '--gpus', 'all',
+		'-v', '/scratch:/scratch',
+		'-v', "$ROOT:/workspace/stx:ro",
+		'-w', '/workspace/stx',
+		'-e', 'HF_HOME=/scratch/hf',
+		$ENV{AXOLOTL_IMAGE},
+		'axolotl', 'train', $config,
+	);
+}
+
+sub cmd_train (@argv)
+{
+	my $config;
+	GetOptionsFromArray( \@argv, 'config=s' => \$config ) or die $USAGE;
+	die $USAGE unless defined $config;
+	my $output_dir = _config_value( "$ROOT/$config", 'output_dir' );
+
+	cmd_claim();
+	cmd_heartbeat('start');
+
+	# The checkpoint watcher pushes each finished epoch while the
+	# next one trains, so a destroy loses at most one epoch.
+	my $interval = $ENV{STX_SYNC_INTERVAL} // 60;
+	my $watcher  = fork // die "train-driver: fork: $!\n";
+	if ( $watcher == 0 ) {
+		while (1) {
+			Time::HiRes::sleep($interval);
+			eval { _sync_checkpoints($output_dir) };
+			warn $@ if $@;
+		}
+	}
+
+	my ( $output, $status ) = _run( _docker_train("$config") );
+	print $output;
+	kill 'TERM', $watcher;
+	waitpid $watcher, 0;
+	_sync_checkpoints($output_dir);
+	die "train-driver: the training run failed with status $status\n"
+	    if $status;
+	say "train: $config is done, checkpoints are in Object Storage";
+
+	return 0;
+}
+
+sub cmd_merge (@argv)
+{
+	my ( $config, $lora, $output );
+	GetOptionsFromArray(
+		\@argv,
+		'config=s' => \$config,
+		'lora=s'   => \$lora,
+		'output=s' => \$output,
+	) or die $USAGE;
+	die $USAGE unless defined $config && defined $lora && defined $output;
+
+	_run_or_die(
+		'docker', 'run', '--rm', '--gpus', 'all',
+		'-v', '/scratch:/scratch',
+		'-v', "$ROOT:/workspace/stx:ro",
+		'-w', '/workspace/stx',
+		'-e', 'HF_HOME=/scratch/hf',
+		$ENV{AXOLOTL_IMAGE},
+		'axolotl', 'merge-lora', $config,
+		"--lora-model-dir=$lora",
+	);
+	_run_or_die( 'cp', '-a', "$lora/merged", $output );
+	say "merge: $output holds the merged model";
+
+	return 0;
+}
+
+sub cmd_gguf (@argv)
+{
+	my ( $input, $output );
+	GetOptionsFromArray(
+		\@argv,
+		'input=s'  => \$input,
+		'output=s' => \$output,
+	) or die $USAGE;
+	die $USAGE unless defined $input && defined $output;
+
+	# Decision T2: the artifact is one GGUF file at Q8_0.
+	_run_or_die(
+		'docker', 'run', '--rm',
+		'-v', '/scratch:/scratch',
+		$ENV{LLAMACPP_IMAGE},
+		'--convert', $input,
+		'--outfile', $output, '--outtype', 'q8_0',
+	);
+	say "gguf: $output is the Q8_0 artifact";
+
+	return 0;
+}
+
+sub cmd_serve (@argv)
+{
+	my $model;
+	GetOptionsFromArray( \@argv, 'model=s' => \$model ) or die $USAGE;
+	die $USAGE unless defined $model;
+
+	_run_or_die(
+		'docker', 'run', '-d', '--name', 'stx-llama',
+		'--gpus', 'all',
+		'-p', '127.0.0.1:8080:8080',
+		'-v', '/scratch:/scratch',
+		$ENV{LLAMACPP_CUDA_IMAGE},
+		'--server',
+		'-m', $model,
+		'--host', '0.0.0.0', '--port', '8080',
+		'-ngl', '99',
+	);
+	for my $try ( 1 .. 60 ) {
+		my ( undef, $status ) =
+		    _run( 'curl', '-sf', 'http://127.0.0.1:8080/health' );
+		if ( $status == 0 ) {
+			say 'serve: llama-server answers on 127.0.0.1:8080';
+			return 0;
+		}
+		sleep 5;
+	}
+	die "train-driver: llama-server did not answer\n";
+}
+
+sub cmd_serve_stop ()
+{
+	_run( 'docker', 'rm', '-f', 'stx-llama' );
+
+	return 0;
+}
+
+sub cmd_put (@argv)
+{
+	my ( $file, $key, $bucket );
+	GetOptionsFromArray(
+		\@argv,
+		'file=s'   => \$file,
+		'key=s'    => \$key,
+		'bucket=s' => \$bucket,
+	) or die $USAGE;
+	die $USAGE unless defined $file && defined $key;
+	$bucket //= $ENV{ARTIFACTS_BUCKET};
+
+	_aws( 'cp', $file, "s3://$bucket/$key" );
+	say "put: s3://$bucket/$key";
+
+	return 0;
+}
+
+# main(@argv):
+#	The command dispatcher.
+sub main (@argv)
+{
+	my $command = shift @argv // die $USAGE;
+	return cmd_claim()               if $command eq 'claim';
+	return cmd_heartbeat( $argv[0] // die $USAGE )
+	    if $command eq 'heartbeat';
+	return cmd_sync_corpus()         if $command eq 'sync-corpus';
+	return cmd_train(@argv)          if $command eq 'train';
+	return cmd_merge(@argv)          if $command eq 'merge';
+	return cmd_gguf(@argv)           if $command eq 'gguf';
+	return cmd_serve(@argv)          if $command eq 'serve';
+	return cmd_serve_stop()          if $command eq 'serve-stop';
+	return cmd_put(@argv)            if $command eq 'put';
+	die $USAGE;
+}
+
+exit main(@ARGV) unless caller;
