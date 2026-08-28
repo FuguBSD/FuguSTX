@@ -30,6 +30,9 @@ resource "scaleway_iam_application" "train" {
 # per the shared train-credential rule. A probe on 2026-08-28 proved
 # that the set covers api-key create and delete. IAC-APPLY-6 accepts
 # the organization scope, because Scaleway offers no narrower one.
+# BlockStorageFullAccess is there for the SBS root volume of the train
+# server: InstancesFullAccess alone cannot write an SBS volume (probed
+# 2026-08-28).
 resource "scaleway_iam_policy" "pipeline" {
   name           = "stx.prod.pipeline"
   description    = "Compute and Object Storage in this project, billing read, and the train key mint."
@@ -39,6 +42,7 @@ resource "scaleway_iam_policy" "pipeline" {
     project_ids = [data.scaleway_account_project.current.id]
     permission_set_names = [
       "InstancesFullAccess",
+      "BlockStorageFullAccess",
       "ElasticMetalFullAccess",
       "ObjectStorageFullAccess",
     ]
