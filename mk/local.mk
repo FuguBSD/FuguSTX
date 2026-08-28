@@ -2,6 +2,10 @@
 # FuguBSD/Tooling does not own this one: it holds rules specific to
 # FuguSTX, until a shared pack picks up the pattern.
 #
+# TEST_GLOBS: the org fragment covers t/ci/*.t. This repository also
+# holds harness and infra tests directly under t/.
+TEST_GLOBS = t/*.t t/ci/*.t
+
 # test-py: the python pack's mk/python.mk defines no test-py target,
 # because `uv run pytest` fails on an empty tree (packages/CLAUDE.md).
 # packages/stx-corpus/tests now exists, so this repository adds its own.

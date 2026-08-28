@@ -1,0 +1,177 @@
+#!/usr/bin/env perl
+# ex:ts=8 sw=4:
+# $OpenBSD$
+#
+# Copyright (c) 2026 Dick Olsson <hi@senzilla.io>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# stx: the FuguSTX harness (decision T7).
+#
+# usage: stx label -m MODEL [-g GRAMMAR] [-t THREADS] [-n MAX] [-l CMD]
+#
+# The label command reads one JSON object per line on stdin, with the
+# shape {"tokens": ["From", "Friday"]}. For each object it runs one
+# llama.cpp call under the committed grammar, and it writes one JSON
+# object per line on stdout: {"labels": [...]}, or {"error": "..."}
+# when the model output does not fit the token list.
+#
+# The harness is the only caller of llama.cpp (ENG-SPLIT-4), and the
+# schema gives the model no offset field (ENG-SPLIT-3). The grammar
+# file share/annotation.gbnf states the serialization (ENG-SCHEMA-1).
+#
+# The llama.cpp command is `llama-cli`. The STX_LLAMA environment
+# variable or the -l option overrides it, and the tests use that for a
+# stub. The option value splits on spaces, so a stub can be
+# "perl stub.pl".
+#
+# Like scripts/deps, core modules only, and v5.34 for macOS.
+
+use v5.34;
+use warnings;
+use experimental 'signatures';
+
+use File::Basename qw(dirname);
+use File::Spec     ();
+use Getopt::Long   qw(GetOptionsFromArray);
+use JSON::PP       ();
+
+my $USAGE =
+    "usage: stx label -m MODEL [-g GRAMMAR] [-t THREADS] [-n MAX] [-l CMD]\n";
+
+my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+
+# _prompt($tokens):
+#	The input serialization of share/annotation.gbnf: one line for
+#	each token, with the 1-based index, one tab, and the form. One
+#	empty line ends the list.
+sub _prompt ($tokens)
+{
+	my $text  = '';
+	my $index = 0;
+	for my $form (@$tokens) {
+		$index++;
+		$text .= "$index\t$form\n";
+	}
+
+	return "$text\n";
+}
+
+# _run_llama($argv):
+#	Run one llama.cpp call, without a shell. Return the standard
+#	output, or die when the call fails.
+sub _run_llama ($argv)
+{
+	my $pid = open my $fh, '-|', @$argv
+	    or die "stx: run $argv->[0]: $!\n";
+	local $/ = undef;
+	my $output = <$fh>;
+	close $fh;
+	die "stx: $argv->[0] failed with status " . ( $? >> 8 ) . "\n" if $?;
+
+	return $output // '';
+}
+
+# _parse_labels($output, $count):
+#	Parse the model output into label records. Return the records,
+#	or undef and a reason. The grammar constrains the vocabulary at
+#	generation time; this parse checks the record shape only.
+sub _parse_labels ($output, $count)
+{
+	my @records;
+	for my $line ( split /\n/, $output ) {
+		next if $line eq '' || $line eq '[end of text]';
+		my @fields = split /\t/, $line, -1;
+		return ( undef, 'a record with ' . @fields . ' fields' )
+		    if @fields != 5;
+		return ( undef, "a head that is not an index: $fields[2]" )
+		    unless $fields[2] =~ /^(?:0|[1-9][0-9]{0,2})\z/;
+		push @records,
+		    {
+			upos   => $fields[0],
+			lemma  => $fields[1],
+			head   => 0 + $fields[2],
+			deprel => $fields[3],
+			feats  => $fields[4],
+		    };
+	}
+	return ( undef, @records . " records for $count tokens" )
+	    if @records != $count;
+
+	return ( \@records, undef );
+}
+
+# label(@argv):
+#	The label command. One llama.cpp call per input line.
+sub label (@argv)
+{
+	my $model;
+	my $grammar = "$ROOT/share/annotation.gbnf";
+	my $threads = 4;
+	my $max     = 2048;
+	my $llama   = $ENV{STX_LLAMA} // 'llama-cli';
+	GetOptionsFromArray(
+		\@argv,
+		'model|m=s'      => \$model,
+		'grammar|g=s'    => \$grammar,
+		'threads|t=i'    => \$threads,
+		'max-tokens|n=i' => \$max,
+		'llama|l=s'      => \$llama,
+	) or die $USAGE;
+	die $USAGE unless defined $model && !@argv;
+	die "stx: no grammar file: $grammar\n" unless -f $grammar;
+
+	my $json = JSON::PP->new->canonical;
+	while ( my $line = <STDIN> ) {
+		chomp $line;
+		next if $line =~ /^\s*\z/;
+		my $request = eval { $json->decode($line) };
+		my $tokens  = ref $request eq 'HASH' ? $request->{tokens} : undef;
+		die "stx: each input line needs a tokens list\n"
+		    unless ref $tokens eq 'ARRAY'
+		    && @$tokens
+		    && !grep { !defined || ref } @$tokens;
+
+		my @argv_llama = (
+			( split ' ', $llama ),
+			'-m'             => $model,
+			'--grammar-file' => $grammar,
+			'--threads'      => $threads,
+			'-n'             => $max,
+			'--temp'         => 0,
+			'-no-cnv',
+			'--no-display-prompt',
+			'-p' => _prompt($tokens),
+		);
+		my ( $labels, $reason ) =
+		    _parse_labels( _run_llama( \@argv_llama ), scalar @$tokens );
+		say $json->encode(
+			  defined $labels
+			? { labels => $labels }
+			: { error  => $reason }
+		);
+	}
+
+	return 0;
+}
+
+# main(@argv):
+#	The command dispatcher.
+sub main (@argv)
+{
+	my $command = shift @argv // die $USAGE;
+	return label(@argv) if $command eq 'label';
+	die $USAGE;
+}
+
+exit main(@ARGV) unless caller;
