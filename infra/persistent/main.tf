@@ -32,7 +32,8 @@ resource "scaleway_iam_application" "train" {
 # the organization scope, because Scaleway offers no narrower one.
 # BlockStorageFullAccess is there for the SBS root volume of the train
 # server: InstancesFullAccess alone cannot write an SBS volume (probed
-# 2026-08-28).
+# 2026-08-28). SSHKeysFullAccess is there for the ephemeral campaign
+# SSH key that the train stack declares.
 resource "scaleway_iam_policy" "pipeline" {
   name           = "stx.prod.pipeline"
   description    = "Compute and Object Storage in this project, billing read, and the train key mint."
@@ -45,6 +46,7 @@ resource "scaleway_iam_policy" "pipeline" {
       "BlockStorageFullAccess",
       "ElasticMetalFullAccess",
       "ObjectStorageFullAccess",
+      "SSHKeysFullAccess",
     ]
   }
 

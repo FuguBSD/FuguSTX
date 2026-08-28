@@ -79,8 +79,9 @@ The FuguBSD/FuguSTX repository holds the CI secrets `SCW_ACCESS_KEY`,
 `SCW_SECRET_KEY`, and `STX_TRAIN_SSH_KEY`, and the variables
 `SCW_DEFAULT_PROJECT_ID` and `SCW_DEFAULT_ORGANIZATION_ID`. The campaign SSH key
 is an ed25519 pair with the fingerprint
-`SHA256:3ZFZ5Zdzq51On4VmSX/IF2y0bY1I1ESx6HwxWjK25gI`. Cloud-init writes its
-public half to the train instance; only the CI secret holds the private half.
+`SHA256:3ZFZ5Zdzq51On4VmSX/IF2y0bY1I1ESx6HwxWjK25gI`. The train stack registers
+its public half as an IAM SSH key, and the key agent of the image installs it on
+root at boot; only the CI secret holds the private half.
 
 Two human steps stay open:
 

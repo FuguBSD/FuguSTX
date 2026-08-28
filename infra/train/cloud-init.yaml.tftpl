@@ -3,9 +3,10 @@
 # user_data is readable through the instance API. No distribution
 # upgrade runs here: a package upgrade on a GPU OS image breaks the
 # NVIDIA driver.
-# The key must land on root: CI connects as root, and a top-level
-# ssh_authorized_keys targets the default user of the image, not root
-# (probed 2026-08-28, ten minutes of publickey denials).
+# The IAM SSH key in main.tf is the delivery path: the key agent of
+# the image installs the registered project keys on root. This block
+# is the fallback for an image without the agent. Cloud-init alone
+# left root without the key in two probes on 2026-08-28.
 disable_root: false
 users:
   - name: root

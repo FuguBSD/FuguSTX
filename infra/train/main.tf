@@ -32,12 +32,24 @@ resource "scaleway_instance_volume" "scratch" {
   tags       = local.tag_list
 }
 
+# The key agent of the image manages /root/.ssh/authorized_keys from
+# the registered project SSH keys, so the campaign key must be an IAM
+# resource, made before the boot. Cloud-init could not deliver it: two
+# probes on 2026-08-28 left root without the key. The public half is
+# not a secret, so the state can hold it.
+resource "scaleway_iam_ssh_key" "campaign" {
+  name       = "stx.prod.train-campaign"
+  public_key = var.ssh_public_key
+}
+
 resource "scaleway_instance_server" "train" {
   name  = "stx.prod.train"
   type  = var.instance_type
   image = data.scaleway_marketplace_image.gpu_os.id
   tags  = local.tag_list
   ip_id = scaleway_instance_ip.train.id
+
+  depends_on = [scaleway_iam_ssh_key.campaign]
 
   root_volume {
     volume_type = "sbs_volume"
