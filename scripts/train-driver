@@ -91,8 +91,13 @@ _env_file("$ROOT/train/config.env");
 my $RUN_ID = $ENV{STX_RUN_ID} or die "train-driver: STX_RUN_ID is not set\n";
 my $HEARTBEAT_URL = "https://$ENV{CHECKPOINT_BUCKET}.$ENDPOINT/"
     . "$ENV{HEARTBEAT_PREFIX}/$RUN_ID/heartbeat";
+
+# The claim key is fixed, so two campaigns contend on one object. The
+# claim body records the run. `make infra-down STACK=train` releases
+# the claim. A probe on 2026-08-28 proved the conditional write: the
+# first PUT gave 200, and the second gave 412.
 my $CLAIM_URL = "https://$ENV{CHECKPOINT_BUCKET}.$ENDPOINT/"
-    . "$ENV{HEARTBEAT_PREFIX}/$RUN_ID/claim";
+    . "$ENV{HEARTBEAT_PREFIX}/claim";
 my $CLAIM_MARKER = $ENV{STX_CLAIM_MARKER} // '/scratch/.stx-claimed';
 my $PID_FILE     = $ENV{STX_HEARTBEAT_PID} // '/tmp/stx-heartbeat.pid';
 
@@ -309,8 +314,9 @@ sub cmd_train (@argv)
 	_sync_checkpoints($output_dir);
 
 	# The heartbeat stops with the run. An idle stack then reaps
-	# after 20 minutes, and Object Storage holds every checkpoint,
-	# so a reap between campaign steps loses no durable data.
+	# after 20 minutes. Object Storage holds every checkpoint and
+	# each converted artifact, and a merge repeats from them, so a
+	# reap between campaign steps loses no unrecoverable data.
 	cmd_heartbeat('stop');
 	die "train-driver: the training run failed with status $status\n"
 	    if $status;
@@ -380,6 +386,14 @@ sub cmd_gguf (@argv)
 		'--convert', $input,
 		'--outfile', $output, '--outtype', 'q8_0',
 	);
+
+	# The artifact goes to Object Storage at once: a reap between
+	# campaign steps must not lose it.
+	_aws(
+		'cp', $output,
+		"s3://$ENV{CHECKPOINT_BUCKET}/$ENV{HEARTBEAT_PREFIX}/"
+		    . "$RUN_ID/gguf/" . basename($output),
+	);
 	cmd_heartbeat('stop');
 	say "gguf: $output is the Q8_0 artifact";
 
@@ -402,6 +416,7 @@ sub cmd_serve (@argv)
 		'-m', $model,
 		'--host', '0.0.0.0', '--port', '8080',
 		'-ngl', '99',
+		'-c', '8192',
 	);
 	for my $try ( 1 .. 60 ) {
 		my ( undef, $status ) =

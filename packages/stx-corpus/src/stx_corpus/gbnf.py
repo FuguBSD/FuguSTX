@@ -1,8 +1,8 @@
 """Parse a llama.cpp GBNF grammar, and match text against it.
 
 ENG-SCHEMA-1 makes the GBNF grammar the one constraint on the model
-output. The tests and the pairs builder match records against the same
-grammar file that llama.cpp loads, so the two rulings can not drift.
+output. The tests match rendered records against the same grammar file
+that llama.cpp loads, so the serialization and the grammar agree.
 
 The parser covers the GBNF subset that `share/annotation.gbnf` uses:
 rules, alternation, sequences, string literals, character classes,

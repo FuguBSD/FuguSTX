@@ -27,7 +27,10 @@ runbook.
 ## The CPT rehearsal
 
 The pass exists to rehearse `make train-cpt` end to end ([T4](DECISIONS.md#t4)).
-Rehearses: FuguTTX TRN-CPT.
+The dev-split comparison of TRN-CPT-2 can run on the train instance GPU, and its
+scorecard records the device. Decision [T2](DECISIONS.md#t2) binds the shipped
+engine and the tier T1 gate, and both stay on the CPU. Rehearses: FuguTTX
+TRN-CPT.
 
 - **TRN-CPT-1** — The CPT rehearsal must run one epoch, at a low learning rate,
   on [the prose lane](corpus.md#cor-lanes).

@@ -65,7 +65,11 @@ my $argv = "@ARGV";
 my ($url) = grep { m{^https://} } @ARGV;
 sub emit ($path) { open my $fh, '<', $path or die $!; print <$fh>; exit 0 }
 emit("$ENV{STX_FIX}/consumption.json") if $url =~ /billing/;
-emit("$ENV{STX_FIX}/heartbeat.txt")    if $url =~ m{/runs/};
+if ( $url =~ m{/runs/claim} ) {
+	print( ( grep { $_ eq 'DELETE' } @ARGV ) ? '204' : "HTTP/2 404\r\n\r\n" );
+	exit 0;
+}
+emit("$ENV{STX_FIX}/heartbeat.txt") if $url =~ m{/runs/};
 if ( $url =~ m{https://([a-z-]+)\.s3.*\?versioning} ) {
 	emit("$ENV{STX_FIX}/versioning-$1.xml");
 }
@@ -295,7 +299,7 @@ subtest 'the watchdog reports, and never destroys, an unmanaged server' =>
 		'watchdog',
 		fixtures => { 'servers.json' => _server( 60, () ) },
 	);
-	is( $status, 0, 'exit 0' );
+	is( $status, 1, 'exit 1: a report must reach a human' );
 	like( $output, qr/watchdog: report: .*no stx:managed tag/,
 		'the report' );
 	unlike( $calls, qr/tofu.*destroy/, 'no destroy runs' );
@@ -375,7 +379,7 @@ subtest 'a train server without an expiry is a report, not a destroy' => sub {
 		'watchdog',
 		fixtures => { 'servers.json' => _server( 60, %train_tags ) },
 	);
-	is( $status, 0, 'exit 0' );
+	is( $status, 1, 'exit 1: a report must reach a human' );
 	like( $output, qr/watchdog: report: .*no stx:expires tag/,
 		'the report' );
 	unlike( $calls, qr/tofu.*destroy/, 'no destroy runs' );
@@ -392,7 +396,7 @@ subtest 'a failed heartbeat read is a report, not a destroy' => sub {
 			'heartbeat.txt' => "HTTP/2 500\r\n\r\n",
 		},
 	);
-	is( $status, 0, 'exit 0' );
+	is( $status, 1, 'exit 1: a report must reach a human' );
 	like( $output, qr/watchdog: report: .*heartbeat read failed/,
 		'the report' );
 	unlike( $calls, qr/tofu.*destroy/, 'no destroy runs' );

@@ -45,7 +45,7 @@ the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
 | Three-application credential split             | The shared instructions, FuguTTX D9                 | 2026-08-25, 2026-08-26, 2026-08-28 |
 | Operator network and key delivery              | The shared instructions, FuguTTX IAC-DEV            | 2026-08-26                         |
 | Train key over SSH, expiry backstop            | The shared instructions                             | —                                  |
-| Watchdog, heartbeat, claim protocol            | The shared instructions                             | —                                  |
+| Watchdog, heartbeat, claim protocol            | The shared instructions                             | 2026-08-28                         |
 | Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          | —                                  |
 | Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | —                                  |
 | Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | —                                  |
@@ -160,6 +160,11 @@ apply to every entry.
   `stx-corpus`. The eval lane holds 4,310 sentences in `stx-evalcorpus`. The
   keys are flat, and a manifest records the `r2.18` tag. Maps to: FuguTTX
   IAC-PERSIST, FuguTTX D6.
+- **The conditional write holds.** A probe wrote one object with
+  `If-None-Match: *`: the first PUT gave 200, and the second gave 412. The
+  delete gave 204, and a read after it gave 404. The claim protocol of the
+  shared instructions works on this platform. Maps to: the shared instructions,
+  FuguTTX TRN-EXEC.
 
 <a id="lrn-scope"></a>
 

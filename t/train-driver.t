@@ -70,8 +70,8 @@ subtest 'the claim is one conditional write' => sub {
 	like( $calls->[0], qr/If-None-Match: \*/, 'the conditional header' );
 	like(
 		$calls->[0],
-		qr{https://stx-checkpoints\.s3\.fr-par\.scw\.cloud/runs/run-1/claim},
-		'the claim key carries the run identifier'
+		qr{https://stx-checkpoints\.s3\.fr-par\.scw\.cloud/runs/claim$},
+		'the claim key is fixed, so two campaigns contend on it'
 	);
 	ok( -f $marker, 'the local marker exists' );
 

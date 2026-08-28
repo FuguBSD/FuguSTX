@@ -15,12 +15,11 @@ can land now. No decision blocks this plan. Decisions
 [T4](../../spec/DECISIONS.md#t4), [T6](../../spec/DECISIONS.md#t6), and
 [T7](../../spec/DECISIONS.md#t7) shape it.
 
-The prerequisites are done: the pipeline key is in the CI secrets, the quota of
-each declared offer is probed, and the billing reads passed with the agent key
-and the pipeline key. [The runbook](../../infra/persistent/RUNBOOK.md) records
-each one, and it names two open human steps: the persistent apply of the
-pipeline-policy change, and the infra-apply branch policy. Both steps gate the
-first campaign dispatch.
+The prerequisites are done. The pipeline key sits in the CI secrets. Both
+declared offers hold a probed quota, and the billing reads passed with both
+keys. [The runbook](../../infra/persistent/RUNBOOK.md) records each one, and it
+names two open human steps: the persistent apply of the pipeline-policy change,
+and the infra-apply branch policy. Both steps gate the first campaign dispatch.
 
 LRN-DELIVER-2 and LRN-DELIVER-3 change the FuguTTX repository. This plan
 excludes both: a FuguTTX plan lands each change.

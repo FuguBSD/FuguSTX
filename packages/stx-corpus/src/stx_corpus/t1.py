@@ -30,7 +30,6 @@ from pathlib import Path
 from typing import Any
 
 from . import bucket
-from .fetch import UD_RELEASE_TAG
 from .lanes import Record, read_records
 
 ARTIFACTS_BUCKET = "stx-artifacts"
@@ -186,6 +185,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.model is None or args.records is None:
             parser.error("--model and --records are required outside --aggregate")
         records = shard_records(split_records(read_records(args.records), args.split), args.shard)
+        tags = {record.tag for record in records}
+        if len(tags) != 1:
+            raise ValueError(f"the lane file holds more than one release tag: {sorted(tags)}")
         replies = label_records(records, args.stx)
         card = scorecard(
             score_replies(records, replies),
@@ -196,8 +198,11 @@ def main(argv: list[str] | None = None) -> int:
                 "device": args.device,
                 "model_hash": sha256_file(args.model),
                 "llama_version": args.llama_version,
-                "threads": args.threads,
-                "ud_release": UD_RELEASE_TAG,
+                # The thread count is a CPU determinism pin (decision
+                # T2). A GPU comparison run carries none.
+                "threads": args.threads if args.device == "cpu" else None,
+                # The tag of the scored lane file, not a code constant.
+                "ud_release": tags.pop(),
                 "shard": args.shard,
             },
         )

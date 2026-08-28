@@ -449,6 +449,7 @@ sub cmd_watchdog (@argv)
 	my $config  = _config();
 	my $servers = _scw(qw(instance server list), "zone=$ZONE");
 	my $destroy = 0;
+	my $reports = 0;
 
 	for my $server (@$servers) {
 		my $tags = _tags( $server->{tags} );
@@ -463,18 +464,21 @@ sub cmd_watchdog (@argv)
 		    _watchdog_verdict( $tags, $age_minutes, $getter );
 		say "watchdog: $verdict: $server->{name}: $reason";
 		$destroy = 1 if $verdict eq 'destroy';
+		$reports++ if $verdict eq 'report';
 	}
 
 	for my $ip ( @{ _scw( qw(instance ip list), "zone=$ZONE" ) } ) {
 		my $tags = _tags( $ip->{tags} );
-		say "watchdog: report: ip $ip->{address}: no stx:managed tag"
-		    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
+		next if ( $tags->{'stx:managed'} // '' ) eq 'true';
+		say "watchdog: report: ip $ip->{address}: no stx:managed tag";
+		$reports++;
 	}
 	for my $volume ( @{ _scw( qw(instance volume list), "zone=$ZONE" ) } ) {
 		my $tags = _tags( $volume->{tags} );
+		next if ( $tags->{'stx:managed'} // '' ) eq 'true';
 		say "watchdog: report: volume $volume->{name}: "
-		    . 'no stx:managed tag'
-		    unless ( $tags->{'stx:managed'} // '' ) eq 'true';
+		    . 'no stx:managed tag';
+		$reports++;
 	}
 
 	if ($destroy) {
@@ -493,7 +497,10 @@ sub cmd_watchdog (@argv)
 		    . 'remains';
 	}
 
-	return 0;
+	# A report must reach a human. The scheduled job fails on one,
+	# and the failure notification is the alert channel until the
+	# CI-webhook channel exists.
+	return $reports ? 1 : 0;
 }
 
 # _tofu($stack, @args):
@@ -745,6 +752,22 @@ sub cmd_down ( $stack, @argv )
 	$keys = _scw( qw(iam api-key list), "application-id=$application" );
 	die "infra: a train key survived the delete\n" if @$keys;
 	say 'down: the train keys are deleted';
+
+	# Release the stack claim, so the next campaign can take it.
+	my $config = _config();
+	my $claim  = "https://$config->{CHECKPOINT_BUCKET}.$ENDPOINT/"
+	    . "$config->{HEARTBEAT_PREFIX}/claim";
+	my ( $output, $status ) = _run(
+		'curl', '-s', '-o', '/dev/null', '-w', '%{http_code}',
+		'--aws-sigv4', "aws:amz:$REGION:s3",
+		'--user', "$ENV{SCW_ACCESS_KEY}:$ENV{SCW_SECRET_KEY}",
+		'-X', 'DELETE', $claim,
+	);
+	die "infra: the claim release failed with status $status\n" if $status;
+	my ( $code, undef ) = _curl_s3( 'HEAD', $claim );
+	die "infra: the stack claim survived the release (HTTP $code)\n"
+	    unless $code == 404;
+	say 'down: the stack claim is released';
 
 	return 0;
 }

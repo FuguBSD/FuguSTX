@@ -75,7 +75,7 @@ with no code keeps "—". Set the roots when the layout lands.
 | Document          | Roots                                                                   |
 | ----------------- | ----------------------------------------------------------------------- |
 | engine.md         | `share`, `bin`                                                          |
-| corpus.md         | `packages/stx-corpus`, `infra/persistent`                               |
+| corpus.md         | `packages/stx-corpus`, `infra/persistent`, `scripts/train-driver`       |
 | training.md       | `train`, `scripts/train`, `scripts/train-driver`, `packages/stx-corpus` |
 | evaluation.md     | `packages/stx-corpus`                                                   |
 | infrastructure.md | `infra`, `scripts/infra`, `mk/local.mk`, `.github/workflows`            |

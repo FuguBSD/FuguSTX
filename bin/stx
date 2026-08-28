@@ -150,8 +150,12 @@ sub label (@argv)
 	my $server;
 	my $grammar = "$ROOT/share/annotation.gbnf";
 	my $threads = 4;
-	my $max     = 2048;
-	my $llama   = $ENV{STX_LLAMA} // 'llama-cli';
+
+	# A long sentence labels at 15 to 25 model tokens per record, so
+	# a 150-token sentence needs beyond 2048. A cap under the legal
+	# output length counts as a model failure in the sweep.
+	my $max   = 4096;
+	my $llama = $ENV{STX_LLAMA} // 'llama-cli';
 	GetOptionsFromArray(
 		\@argv,
 		'model|m=s'      => \$model,
@@ -196,6 +200,7 @@ sub label (@argv)
 				'--grammar-file' => $grammar,
 				'--threads'      => $threads,
 				'-n'             => $max,
+				'-c'             => 0,
 				'--temp'         => 0,
 				'-no-cnv',
 				'--no-display-prompt',
