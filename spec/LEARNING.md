@@ -50,12 +50,13 @@ the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
 | Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | 2026-08-28, 2026-08-29             |
 | Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | 2026-08-28                         |
 | CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        | 2026-08-28                         |
-| Promotion and the artifacts scorecard          | FuguTTX D5, FuguTTX TRN-EXEC                        | 2026-08-28, 2026-08-29             |
+| Promotion and the artifacts scorecard          | FuguTTX D5, FuguTTX TRN-EXEC                        | 2026-08-29                         |
 | Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         | —                                  |
 | Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     | 2026-08-26                         |
 | KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      | 2026-08-26                         |
 | Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | —                                  |
-| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | 2026-08-28, 2026-08-29             |
+| llama.cpp at a pinned build, CPU inference     | FuguTTX D2, and the FuguTTX inference specification | 2026-08-28, 2026-08-29             |
+| llama.cpp on OpenBSD, determinism              | FuguTTX D2, and the FuguTTX inference specification | —                                  |
 
 <a id="lrn-entries"></a>
 
@@ -203,13 +204,13 @@ apply to every entry.
   2026-08-29 entry). Maps to: the shared instructions, FuguTTX IAC-TRAIN.
 - **Training cost at 0.6B, measured.** CPT, one epoch over 7,009 prose
   paragraphs: 8 optimizer steps, 18.8 s train time, final loss 5.97, a 2m01s
-  job. Each SFT pass, two epochs over 22,123 pairs: 464 steps, ~813 s, 1.48e4
-  tokens/s per GPU, final loss 0.187 (base) and 0.185 (cpt), 29.66 GiB peak
-  memory. The two SFT wall clocks differ by 0.5 s: the cost is deterministic.
-  GGUF conversion: ~90 s. Dev scoring: 28–31 min per model. The full matrix used
-  ~2 h of the 4-hour lease, retries included. Scope: Qwen3-0.6B-Base with LoRA
-  on one H100-1-80G; this predicts no 4B number. Maps to: FuguTTX TRN-CPT,
-  FuguTTX TRN-SFT, FuguTTX TRN-EXEC, FuguTTX D4.
+  job. Each SFT pass ran two epochs over 22,123 pairs: 464 steps, ~813 s, 1.48e4
+  tokens/s per GPU. The final losses: 0.187 (base) and 0.185 (cpt), at 29.66 GiB
+  peak memory. The two SFT wall clocks differ by 0.5 s: the cost is
+  deterministic. GGUF conversion: ~90 s. Dev scoring: 28–31 min per model. The
+  full matrix used ~2 h of the 4-hour lease, retries included. Scope:
+  Qwen3-0.6B-Base with LoRA on one H100-1-80G; this predicts no 4B number. Maps
+  to: FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX TRN-EXEC, FuguTTX D4.
 - **The CPT pass stays (TRN-CPT-2).** `sft-cpt` beats `sft-base` on every dev
   metric — ewt LAS 0.7725 versus 0.7488, gum LAS 0.7652 versus 0.7555 — and cuts
   the parse failures (ewt 80→47, gum 25→19). The campaign promotes `sft-cpt`,
@@ -241,11 +242,11 @@ apply to every entry.
   starts its own idempotent writer; after the broken pipe the claim held, and
   the retry ran on the same stack three minutes later. The watchdog never
   threatened the stack. Maps to: the shared instructions.
-- **The forecast gate works, and the price moved.** The gate printed "forecast:
-  go: EUR 1.23 consumed plus EUR 11.47 forecast stays under the EUR 300.00
-  budget" before the good boot, at the live price of EUR 2.8665 per hour. Boot
-  friction cost about EUR 3, and the whole campaign cost about EUR 21. Maps to:
-  FuguTTX IAC-PREREQ, the shared instructions.
+- **The forecast gate works.** The gate printed "forecast: go: EUR 1.23 consumed
+  plus EUR 11.47 forecast stays under the EUR 300.00 budget" before the good
+  boot, at the live price of EUR 2.8665 per hour. Boot friction cost about EUR
+  3, and the whole campaign cost about EUR 21. Maps to: FuguTTX IAC-PREREQ, the
+  shared instructions.
 
 ### 2026-08-29 — The watchdog reap
 
@@ -279,16 +280,17 @@ apply to every entry.
   transport needs its own probe after a pin change. Maps to: FuguTTX D2, FuguTTX
   TRN-EXEC, the FuguTTX inference specification.
 - **The tier T1 baseline ran on free CPU shards.** Twelve CI shards swept the
-  4,310-sentence eval lane in 71 minutes wall clock (run 33241110946, shards
-  36–71 minutes, four threads each), with no GPU and no instance. The aggregate
-  scorecard: ewt LAS 0.7719, UPOS 0.9354, lemma 0.9509, 46 failures; gum LAS
-  0.7647, UPOS 0.9310, lemma 0.9492, 24 failures; pud LAS 0.7817, UPOS 0.9515,
-  lemma 0.9613, 6 failures. The eval scores sit within 0.001 of the dev scores
-  of the same model (ewt LAS 0.7719 versus 0.7725). The dev split therefore
-  predicted the eval lane. evaluation.md holds each value as the tier T1
-  threshold (EVL-TIERS-5). Scope: one model, 0.6B at Q8_0, UD r2.18, llama
-  b10666, greedy CPU decoding. Maps to: FuguTTX D2, FuguTTX D5, the FuguTTX
-  inference specification.
+  4,310-sentence eval lane in 71 minutes wall clock (run 33241110946). Each
+  shard ran 36–71 minutes on four threads, with no GPU and no instance. The
+  aggregate scorecard: ewt LAS 0.7719, UPOS 0.9354, lemma 0.9509, 46 failures;
+  gum LAS 0.7647, UPOS 0.9310, lemma 0.9492, 24 failures; pud LAS 0.7817, UPOS
+  0.9515, lemma 0.9613, 6 failures. The ewt and gum eval scores sit within 0.001
+  of the dev scores (LAS 0.7719 versus 0.7725, and 0.7647 versus 0.7652). The
+  dev split therefore predicted the eval lane on the shared treebanks; pud has
+  no dev split. evaluation.md holds each value as the tier T1 threshold
+  (EVL-TIERS-5). Scope: one model, 0.6B at Q8_0, UD r2.18, llama b10666, greedy
+  CPU decoding. Maps to: FuguTTX D2, FuguTTX D5, the FuguTTX inference
+  specification.
 
 <a id="lrn-scope"></a>
 
