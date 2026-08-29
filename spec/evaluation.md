@@ -17,6 +17,16 @@ Three tiers make the evaluation:
 | tier T1 | CI, CPU                      | Promotion sweep against the [eval lane](corpus.md#cor-lanes), gated    |
 | tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                       |
 
+The tier T1 thresholds (EVL-TIERS-5). The baseline scorecard in
+[the artifacts bucket](corpus.md#cor-buckets) holds the pins, the counts, and
+the model hash:
+
+| Treebank | UPOS   | Lemma  | LAS    |
+| -------- | ------ | ------ | ------ |
+| ewt      | 0.9354 | 0.9509 | 0.7719 |
+| gum      | 0.9310 | 0.9492 | 0.7647 |
+| pud      | 0.9515 | 0.9613 | 0.7817 |
+
 - **EVL-TIERS-1** — Each promotion must write a scorecard to the artifacts
   bucket.
 - **EVL-TIERS-2** — CI must run tier T0 on the CPU, on every commit. The score

@@ -277,6 +277,17 @@ apply to every entry.
   transport never sees the flag, so the dev scoring missed the break: each
   transport needs its own probe after a pin change. Maps to: FuguTTX D2, FuguTTX
   TRN-EXEC, the FuguTTX inference specification.
+- **The tier T1 baseline ran on free CPU shards.** Twelve CI shards swept the
+  4,310-sentence eval lane in 71 minutes wall clock (run 33241110946, shards
+  36–71 minutes, four threads each), with no GPU and no instance. The aggregate
+  scorecard: ewt LAS 0.7719, UPOS 0.9354, lemma 0.9509, 46 failures; gum LAS
+  0.7647, UPOS 0.9310, lemma 0.9492, 24 failures; pud LAS 0.7817, UPOS 0.9515,
+  lemma 0.9613, 6 failures. The eval scores sit within 0.001 of the dev scores
+  of the same model (ewt LAS 0.7719 versus 0.7725), so the dev split predicted
+  the eval lane at this scale. evaluation.md holds each value as the tier T1
+  threshold (EVL-TIERS-5). Scope: one model, 0.6B at Q8_0, UD r2.18, llama
+  b10666, greedy CPU decoding. Maps to: FuguTTX D2, FuguTTX D5, the FuguTTX
+  inference specification.
 
 <a id="lrn-scope"></a>
 
