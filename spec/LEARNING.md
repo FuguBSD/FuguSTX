@@ -47,14 +47,15 @@ the synced [infra/CLAUDE.md](../infra/CLAUDE.md).
 | Train key over SSH, expiry backstop            | The shared instructions                             | 2026-08-28, 2026-08-29             |
 | Watchdog, heartbeat, claim protocol            | The shared instructions                             | 2026-08-28, 2026-08-29             |
 | Train stack up/down, teardown completeness     | FuguTTX IAC-TRAIN, the shared instructions          | 2026-08-28, 2026-08-29             |
-| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | 2026-08-28                         |
+| Checkpoint sync per epoch                      | FuguTTX IAC-DURA, FuguTTX TRN-EXEC                  | 2026-08-28, 2026-08-29             |
 | Axolotl in Docker on the GPU OS image          | FuguTTX TRN-EXEC, FuguTTX D3                        | 2026-08-28                         |
 | CPT and SFT passes end to end                  | FuguTTX TRN-CPT, FuguTTX TRN-SFT, FuguTTX D4        | 2026-08-28                         |
+| Promotion and the artifacts scorecard          | FuguTTX D5, FuguTTX TRN-EXEC                        | 2026-08-28, 2026-08-29             |
 | Qwen3-32B under vLLM, SSH tunnel, judge filter | FuguTTX TRN-AUG, FuguTTX D4                         | —                                  |
 | Corpus lanes and bucket policies               | FuguTTX IAC-PERSIST, FuguTTX D6                     | 2026-08-26                         |
 | KVM test and dev host selection                | FuguTTX IAC-METAL, FuguTTX IAC-DEV, FuguTTX D9      | 2026-08-26                         |
 | Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | —                                  |
-| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | —                                  |
+| llama.cpp on OpenBSD, CPU only, determinism    | FuguTTX D2, and the FuguTTX inference specification | 2026-08-28, 2026-08-29             |
 
 <a id="lrn-entries"></a>
 
@@ -209,11 +210,11 @@ apply to every entry.
   ~2 h of the 4-hour lease, retries included. Scope: Qwen3-0.6B-Base with LoRA
   on one H100-1-80G; this predicts no 4B number. Maps to: FuguTTX TRN-CPT,
   FuguTTX TRN-SFT, FuguTTX TRN-EXEC, FuguTTX D4.
-- **The CPT pass earns its keep (TRN-CPT-2).** `sft-cpt` beats `sft-base` on
-  every dev metric — ewt LAS 0.7725 versus 0.7488, gum LAS 0.7652 versus 0.7555
-  — and near halves the parse failures (ewt 80→47, gum 25→19). The campaign
-  promotes `sft-cpt`, and training.md keeps the CPT pass. Scope: one run, dev
-  split, 0.6B, UD r2.18, llama b10666. Maps to: FuguTTX TRN-CPT, FuguTTX D4.
+- **The CPT pass stays (TRN-CPT-2).** `sft-cpt` beats `sft-base` on every dev
+  metric — ewt LAS 0.7725 versus 0.7488, gum LAS 0.7652 versus 0.7555 — and cuts
+  the parse failures (ewt 80→47, gum 25→19). The campaign promotes `sft-cpt`,
+  and training.md keeps the CPT pass. Scope: one run, dev split, 0.6B, UD r2.18,
+  llama b10666. Maps to: FuguTTX TRN-CPT, FuguTTX D4.
 - **Axolotl in Docker and the checkpoint sync work.** Cloud-init pre-pulls the
   Axolotl image (`main-20260827-py3.12-cu130-2.12.1`) during the SSH wait, and
   the AWS bundled installer supplies awscli, which Ubuntu Noble does not
@@ -240,11 +241,11 @@ apply to every entry.
   starts its own idempotent writer; after the broken pipe the claim held, and
   the retry ran on the same stack three minutes later. The watchdog never
   threatened the stack. Maps to: the shared instructions.
-- **The forecast gate works, and the price crept.** The gate printed "forecast:
+- **The forecast gate works, and the price moved.** The gate printed "forecast:
   go: EUR 1.23 consumed plus EUR 11.47 forecast stays under the EUR 300.00
   budget" before the good boot, at the live price of EUR 2.8665 per hour. Boot
-  friction cost about EUR 3; the whole campaign about EUR 21, inside the EUR
-  15–30 estimate. Maps to: FuguTTX IAC-PREREQ, the shared instructions.
+  friction cost about EUR 3, and the whole campaign cost about EUR 21. Maps to:
+  FuguTTX IAC-PREREQ, the shared instructions.
 
 ### 2026-08-29 — The watchdog reap
 
@@ -253,8 +254,8 @@ apply to every entry.
   late. The expired stack lived 2 h 23 m past `stx:expires` (~EUR 6.8 of idle
   H100) before the reap (run 33227369925: "the time passes stx:expires"). The
   tag backstop carried the guarantee, exactly as the workflow comment predicts.
-  Dispatch `down` at the end of the work; never lean on the schedule. Maps to:
-  the shared instructions, FuguTTX IAC-TRAIN.
+  Dispatch `down` at the end of the work; the schedule alone is best effort.
+  Maps to: the shared instructions, FuguTTX IAC-TRAIN.
 - **Teardown completeness holds under the watchdog.** The reap destroyed all
   four resources (server, scratch volume, IAM key, IP) in 39 s, deleted the
   train keys, released the claim, and printed "the destroy is confirmed: no
@@ -264,9 +265,9 @@ apply to every entry.
 
 - **A promote must not need the instance.** The scratch volume dies with the
   stack, and the SSH promote path dies with it. The GGUF survives in the
-  checkpoint bucket (TRN-EXEC-4 pays off), so `scripts/train promote --run-id`
-  now copies it to the artifacts bucket on the runner, and the dev scorecard
-  `model_hash` gates the copy. The promote of `sft-cpt` ran stackless (run
+  checkpoint bucket (TRN-EXEC-4). `scripts/train promote --run-id` now copies it
+  to the artifacts bucket on the runner, and the dev scorecard `model_hash`
+  gates the copy (TRN-EXEC-5). The promote of `sft-cpt` ran stackless (run
   33240656338), and the hash matched. Maps to: FuguTTX TRN-EXEC, FuguTTX D5.
 - **llama.cpp split its CLI, and the pin crossed the split.** At b10666,
   `llama-cli` is a chat tool: it rejects `-no-cnv`, and its chat template would
@@ -283,8 +284,8 @@ apply to every entry.
   scorecard: ewt LAS 0.7719, UPOS 0.9354, lemma 0.9509, 46 failures; gum LAS
   0.7647, UPOS 0.9310, lemma 0.9492, 24 failures; pud LAS 0.7817, UPOS 0.9515,
   lemma 0.9613, 6 failures. The eval scores sit within 0.001 of the dev scores
-  of the same model (ewt LAS 0.7719 versus 0.7725), so the dev split predicted
-  the eval lane at this scale. evaluation.md holds each value as the tier T1
+  of the same model (ewt LAS 0.7719 versus 0.7725). The dev split therefore
+  predicted the eval lane. evaluation.md holds each value as the tier T1
   threshold (EVL-TIERS-5). Scope: one model, 0.6B at Q8_0, UD r2.18, llama
   b10666, greedy CPU decoding. Maps to: FuguTTX D2, FuguTTX D5, the FuguTTX
   inference specification.

@@ -91,6 +91,8 @@ FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
   provisioned instance.
 - **TRN-EXEC-4** — Checkpoints must synchronize to Object Storage after each
   epoch.
+- **TRN-EXEC-5** — A promotion must upload the scored GGUF to the artifacts
+  bucket, and the artifact must match the dev scorecard `model_hash`.
 
 <a id="trn-budget"></a>
 

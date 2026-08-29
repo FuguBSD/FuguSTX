@@ -83,16 +83,17 @@ is an ed25519 pair with the fingerprint
 its public half as an IAM SSH key, and the key agent of the image installs it on
 root at boot; only the CI secret holds the private half.
 
-The stack applied on 2026-08-28, in three steps around the first campaign. The
-pipeline policy gained `IAMApplicationManager`, so the CI up job mints the train
-key. The first campaign boots then added `BlockStorageFullAccess` (an SBS root
-volume writes through the Block Storage API) and `SSHKeysFullAccess` (the train
-stack registers the campaign key as an IAM resource).
-[The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each probe.
+The operator applied the stack on 2026-08-28, in three steps around the first
+campaign. The pipeline policy gained `IAMApplicationManager`, so the CI up job
+mints the train key. The campaign then added `BlockStorageFullAccess`: an SBS
+root volume writes through the Block Storage API. It also added
+`SSHKeysFullAccess`: the train stack registers the campaign key as an IAM
+resource. [The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each
+probe.
 
-The first CI forecast check ran before the campaign boot on 2026-08-28, with the
-pipeline key: "forecast: go: EUR 1.23 consumed plus EUR 11.47 forecast stays
-under the EUR 300.00 budget", at the live price of EUR 2.8665 per hour.
+The CI forecast check ran with the pipeline key during the campaign, and the
+gate passed. That go closes the pipeline billing-read probe, and the LEARNING
+entries record the printed forecast and the live price.
 
 One human step stays open:
 
