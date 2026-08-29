@@ -31,9 +31,12 @@
 # schema gives the model no offset field (ENG-SPLIT-3). The grammar
 # file share/annotation.gbnf states the serialization (ENG-SCHEMA-1).
 #
-# Two transports reach llama.cpp. The exec transport runs `llama-cli`
-# once per sentence; the STX_LLAMA environment variable or the -l
-# option overrides the command, and the tests use that for a stub. The
+# Two transports reach llama.cpp. The exec transport runs
+# `llama-completion` once per sentence: the raw one-shot tool of the
+# pinned build. Do not call `llama-cli`: since about b10650 it is a
+# chat tool, it rejects `-no-cnv`, and its chat template would wrap
+# the prompt. The STX_LLAMA environment variable or the -l option
+# overrides the command, and the tests use that for a stub. The
 # option value splits on spaces, so a stub can be "perl stub.pl". The
 # server transport posts to one warm llama-server (-s URL), and the
 # campaign uses it on the train instance.
@@ -94,7 +97,11 @@ sub _parse_labels ($output, $count)
 {
 	my @records;
 	for my $line ( split /\n/, $output ) {
-		next if $line eq '' || $line eq '[end of text]';
+
+		# Since b10666 the marker arrives with a leading space.
+		next
+		    if $line =~ /^\s*\z/
+		    || $line =~ /^\s*\[end of text\]\s*\z/;
 		my @fields = split /\t/, $line, -1;
 		return ( undef, 'a record with ' . @fields . ' fields' )
 		    if @fields != 5;
@@ -155,7 +162,7 @@ sub label (@argv)
 	# a 150-token sentence needs beyond 2048. A cap under the legal
 	# output length counts as a model failure in the sweep.
 	my $max   = 4096;
-	my $llama = $ENV{STX_LLAMA} // 'llama-cli';
+	my $llama = $ENV{STX_LLAMA} // 'llama-completion';
 	GetOptionsFromArray(
 		\@argv,
 		'model|m=s'      => \$model,
