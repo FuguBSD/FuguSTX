@@ -92,14 +92,14 @@ resource. [The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each
 probe.
 
 The CI forecast check ran with the pipeline key during the campaign, and the
-gate passed. That go closes the pipeline billing-read probe, and the LEARNING
-entries record the printed forecast and the live price.
+gate passed, which closes the pipeline billing-read probe. The LEARNING entries
+record the printed forecast and the live price.
 
 One human step stays open:
 
 1. The `infra-apply` environment exists with a main-only deployment branch
-   policy. Move the three secrets and the two variables into it. Until then, the
-   repository scope serves the same workflows.
+   policy, and it holds the two variables. Move the three secrets into it. Until
+   then, the repository scope serves the same workflows.
 
 The price table of [training.md](../../spec/training.md#trn-inst) holds the
 2026-08-28 price read.

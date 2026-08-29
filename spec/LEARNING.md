@@ -201,7 +201,8 @@ apply to every entry.
   scratch volume before the server create failed; attempt 2 adopted and retagged
   both ("Plan: 1 to add, 2 to change, 0 to destroy"). A half-up stack bills
   until a `down` dispatch; the watchdog is not the cleanup path (see the
-  2026-08-29 entry). Maps to: the shared instructions, FuguTTX IAC-TRAIN.
+  watchdog-reap entry of 2026-08-29). Maps to: the shared instructions, FuguTTX
+  IAC-TRAIN.
 - **Training cost at 0.6B, measured.** CPT, one epoch over 7,009 prose
   paragraphs: 8 optimizer steps, 18.8 s train time, final loss 5.97, a 2m01s
   job. Each SFT pass ran two epochs over 22,123 pairs: 464 steps, ~813 s, 1.48e4
@@ -256,7 +257,8 @@ apply to every entry.
   H100) before the reap (run 33227369925: "the time passes stx:expires"). The
   tag backstop carried the guarantee, exactly as the workflow comment predicts.
   Dispatch `down` at the end of the work; the schedule alone is best effort.
-  Maps to: the shared instructions, FuguTTX IAC-TRAIN.
+  Scope: sixteen slots of one night, in one repository; the skip rate can differ
+  elsewhere. Maps to: the shared instructions, FuguTTX IAC-TRAIN.
 - **Teardown completeness holds under the watchdog.** The reap destroyed all
   four resources (server, scratch volume, IAM key, IP) in 39 s, deleted the
   train keys, released the claim, and printed "the destroy is confirmed: no
@@ -265,11 +267,12 @@ apply to every entry.
 ### 2026-08-29 — The stackless promote and the tier T1 baseline
 
 - **A promote must not need the instance.** The scratch volume dies with the
-  stack, and the SSH promote path dies with it. The GGUF survives in the
-  checkpoint bucket (TRN-EXEC-4). `scripts/train promote --run-id` now copies it
-  to the artifacts bucket on the runner, and the dev scorecard `model_hash`
-  gates the copy (TRN-EXEC-5). The promote of `sft-cpt` ran stackless (run
-  33240656338), and the hash matched. Maps to: FuguTTX TRN-EXEC, FuguTTX D5.
+  stack, and an SSH promote path dies with it. The GGUF survives, because the
+  gguf step uploads it to the checkpoint bucket at once. `scripts/train promote`
+  now copies it to the artifacts bucket on the runner, and the dev scorecard
+  `model_hash` gates the copy (TRN-EXEC-5). The promote of `sft-cpt` ran
+  stackless (run 33240656338), and the hash matched. Maps to: FuguTTX TRN-EXEC,
+  FuguTTX D5.
 - **llama.cpp split its CLI, and the pin crossed the split.** At b10666,
   `llama-cli` is a chat tool: it rejects `-no-cnv`, and its chat template would
   wrap the raw prompt. The raw one-shot tool is now `llama-completion`, and the

@@ -103,6 +103,13 @@ subtest 'the option guards hold' => sub {
 	is( scalar @$calls, 0, 'no S3 call' );
 
 	( $output, $status, $calls ) = _train(
+		'promote --name sft-cpt',
+		name => 'no-run-id',
+	);
+	isnt( $status, 0, 'promote needs --run-id' );
+	is( scalar @$calls, 0, 'no S3 call without a run' );
+
+	( $output, $status, $calls ) = _train(
 		'gguf --name sft-cpt --run-id run-1',
 		name => 'wrong-verb',
 	);

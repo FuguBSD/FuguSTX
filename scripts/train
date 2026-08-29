@@ -23,18 +23,19 @@
 #        train sft-base | train sft-cpt
 #        train gguf --name sft-base|sft-cpt
 #        train score --name NAME
-#        train promote --name NAME [--run-id RUN]
+#        train promote --name NAME --run-id RUN
 #
-# Each verb copies the tracked repository files to the instance, and
-# it runs the matching scripts/train-driver step there over SSH
-# (TRN-EXEC-3). The operator network resets SSH, so CI runs these
-# verbs, per the LEARNING entries. The instance address comes from the
-# train stack output. STX_SSH_KEY_FILE names the campaign SSH key.
+# Each remote verb copies the tracked repository files to the
+# instance, and it runs the matching scripts/train-driver step there
+# over SSH (TRN-EXEC-3). The operator network resets SSH, so CI runs
+# these verbs, per the LEARNING entries. The instance address comes
+# from the train stack output. STX_SSH_KEY_FILE names the campaign
+# SSH key.
 #
-# The exception is promote with --run-id: the verb then runs on the
-# local host, and it needs no instance. The campaign GGUF survives a
-# teardown in the checkpoint bucket, so the verb copies it to the
-# artifacts bucket, and the dev scorecard hash gates the copy.
+# The promote verb runs on the local host, and it needs no instance.
+# The gguf verb uploads each artifact to the checkpoint bucket at
+# once, so promote copies it from there to the artifacts bucket, and
+# the dev scorecard hash gates the copy (TRN-EXEC-5).
 #
 # Like scripts/deps, core modules only, and v5.34.
 
@@ -54,7 +55,7 @@ usage: train cpt
        train sft-base | train sft-cpt
        train gguf --name sft-base|sft-cpt
        train score --name NAME
-       train promote --name NAME [--run-id RUN]
+       train promote --name NAME --run-id RUN
 EOF
 
 my $ROOT     = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
@@ -170,12 +171,12 @@ sub _aws (@args)
 	return;
 }
 
-# _promote_stackless($name, $run_id):
-#	Step 10 with no instance. A teardown keeps the campaign GGUF
-#	in the checkpoint bucket, so the local host copies it to the
-#	artifacts bucket. The dev scorecard hash gates the copy: the
-#	promoted artifact must be the scored artifact.
-sub _promote_stackless ( $name, $run_id )
+# _promote($name, $run_id):
+#	Promote one artifact, on the local host. The gguf verb put the
+#	artifact in the checkpoint bucket, so the copy needs no
+#	instance. The dev scorecard hash gates the copy: the promoted
+#	artifact must be the scored artifact (TRN-EXEC-5).
+sub _promote ( $name, $run_id )
 {
 	_config();
 	my $dir  = File::Temp::tempdir( CLEANUP => 1 );
@@ -221,9 +222,9 @@ sub main (@argv)
 	) or die $USAGE;
 	die $USAGE if defined $run_id && $verb ne 'promote';
 
-	if ( $verb eq 'promote' && defined $run_id ) {
-		die $USAGE unless defined $name;
-		_promote_stackless( $name, $run_id );
+	if ( $verb eq 'promote' ) {
+		die $USAGE unless defined $name && defined $run_id;
+		_promote( $name, $run_id );
 		return 0;
 	}
 
@@ -288,18 +289,6 @@ sub main (@argv)
 			    . '--upload; '
 			    . 'status=$?; scripts/train-driver serve-stop; '
 			    . 'exit $status' );
-		return 0;
-	}
-	if ( $verb eq 'promote' ) {
-		die $USAGE unless defined $name;
-
-		# Step 10: the chosen artifact and its hash land in the
-		# artifacts bucket.
-		_remote( $ip,
-			      "sha256sum /scratch/gguf/$name.gguf && "
-			    . 'scripts/train-driver put '
-			    . "--file /scratch/gguf/$name.gguf "
-			    . '--key "runs/$STX_RUN_ID/stx-' . $name . '.gguf"' );
 		return 0;
 	}
 	die $USAGE;

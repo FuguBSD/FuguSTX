@@ -27,6 +27,9 @@ counts, and the model hash:
 | gum      | 0.9310 | 0.9492 | 0.7647 |
 | pud      | 0.9515 | 0.9613 | 0.7817 |
 
+A promotion review compares the next scorecard against these values by hand. No
+job reads the table.
+
 - **EVL-TIERS-1** — Each promotion must write a scorecard to the artifacts
   bucket.
 - **EVL-TIERS-2** — CI must run tier T0 on the CPU, on every commit. The score
