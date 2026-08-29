@@ -39,6 +39,9 @@ on:
         options:
           - sft-base
           - sft-cpt
+      run_id:
+        description: The run identifier, for a promote after a teardown
+        required: false
 
 # One concurrency group serializes each train stack change. A
 # cancelled apply can orphan a billed resource.
@@ -59,10 +62,12 @@ jobs:
       SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID }}
       AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      AWS_DEFAULT_REGION: fr-par
       STX_SSH_KEY_FILE: /home/runner/.ssh/stx-train
       # A free-text input reaches the shell through the environment,
       # never through an inline expression.
       TRAIN_HOURS_INPUT: ${{ inputs.hours }}
+      RUN_ID_INPUT: ${{ inputs.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,9 +122,16 @@ jobs:
         run: |
           scripts/train score --name '${{ inputs.name }}'
 
+      # With a run_id input, the promote runs on the runner, from the
+      # checkpoint bucket. It needs no instance after a teardown.
       - name: Promote the artifact
         if: inputs.action == 'promote'
-        run: scripts/train promote --name ${{ inputs.name }}
+        run: |
+          if [ -n "$RUN_ID_INPUT" ]; then
+            scripts/train promote --name ${{ inputs.name }} --run-id "$RUN_ID_INPUT"
+          else
+            scripts/train promote --name ${{ inputs.name }}
+          fi
 
       - name: Stack down
         if: inputs.action == 'down'

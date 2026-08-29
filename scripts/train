@@ -23,7 +23,7 @@
 #        train sft-base | train sft-cpt
 #        train gguf --name sft-base|sft-cpt
 #        train score --name NAME
-#        train promote --name NAME
+#        train promote --name NAME [--run-id RUN]
 #
 # Each verb copies the tracked repository files to the instance, and
 # it runs the matching scripts/train-driver step there over SSH
@@ -31,14 +31,21 @@
 # verbs, per the LEARNING entries. The instance address comes from the
 # train stack output. STX_SSH_KEY_FILE names the campaign SSH key.
 #
+# The exception is promote with --run-id: the verb then runs on the
+# local host, and it needs no instance. The campaign GGUF survives a
+# teardown in the checkpoint bucket, so the verb copies it to the
+# artifacts bucket, and the dev scorecard hash gates the copy.
+#
 # Like scripts/deps, core modules only, and v5.34.
 
 use v5.34;
 use warnings;
 use experimental 'signatures';
 
+use Digest::SHA    ();
 use File::Basename qw(dirname);
 use File::Spec     ();
+use File::Temp     ();
 use Getopt::Long   qw(GetOptionsFromArray);
 
 my $USAGE = <<'EOF';
@@ -47,10 +54,11 @@ usage: train cpt
        train sft-base | train sft-cpt
        train gguf --name sft-base|sft-cpt
        train score --name NAME
-       train promote --name NAME
+       train promote --name NAME [--run-id RUN]
 EOF
 
-my $ROOT = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+my $ROOT     = dirname( dirname( File::Spec->rel2abs(__FILE__) ) );
+my $ENDPOINT = 's3.fr-par.scw.cloud';
 
 # _ip():
 #	The instance address, from the train stack output. A fresh CI
@@ -131,13 +139,93 @@ sub _uv ()
 	    . '{ curl -LsSf https://astral.sh/uv/install.sh | sh; }';
 }
 
+# _config():
+#	Read train/config.env into %ENV. The stackless promote needs
+#	the bucket names on the local host; a remote step reads the
+#	file on the instance instead.
+sub _config ()
+{
+	open my $fh, '<', "$ROOT/train/config.env"
+	    or die "train: read $ROOT/train/config.env: $!\n";
+	while ( my $line = <$fh> ) {
+		chomp $line;
+		next if $line =~ /^\s*(?:#|\z)/;
+		my ( $key, $value ) = split /=/, $line, 2;
+		$ENV{$key} = $value;
+	}
+	close $fh;
+
+	return;
+}
+
+# _aws(@args):
+#	One S3 client call against the Scaleway endpoint, on the local
+#	host. The CI runner image provides the client, as in t1.yml.
+sub _aws (@args)
+{
+	system( 'aws', '--endpoint-url', "https://$ENDPOINT", 's3', @args )
+	    == 0
+	    or die "train: the S3 call failed: @args\n";
+
+	return;
+}
+
+# _promote_stackless($name, $run_id):
+#	Step 10 with no instance. A teardown keeps the campaign GGUF
+#	in the checkpoint bucket, so the local host copies it to the
+#	artifacts bucket. The dev scorecard hash gates the copy: the
+#	promoted artifact must be the scored artifact.
+sub _promote_stackless ( $name, $run_id )
+{
+	_config();
+	my $dir  = File::Temp::tempdir( CLEANUP => 1 );
+	my $gguf = "$dir/$name.gguf";
+	my $card = "$dir/scorecard.json";
+	_aws( 'cp',
+		"s3://$ENV{CHECKPOINT_BUCKET}/$ENV{HEARTBEAT_PREFIX}/"
+		    . "$run_id/gguf/$name.gguf",
+		$gguf );
+	_aws( 'cp',
+		"s3://$ENV{ARTIFACTS_BUCKET}/runs/$run_id/"
+		    . "scorecard-dev-$name.json",
+		$card );
+
+	open my $fh, '<', $card or die "train: read $card: $!\n";
+	my $json = do { local $/ = undef; <$fh> };
+	close $fh;
+	my ($expected) = $json =~ /"model_hash":\s*"([0-9a-f]{64})"/
+	    or die "train: the scorecard holds no model_hash\n";
+
+	my $hash = Digest::SHA->new(256)->addfile($gguf)->hexdigest;
+	say "promote: sha256 $hash  $name.gguf";
+	die "train: the artifact hash does not match the scorecard\n"
+	    unless $hash eq $expected;
+
+	my $key = "runs/$run_id/stx-$name.gguf";
+	_aws( 'cp', $gguf, "s3://$ENV{ARTIFACTS_BUCKET}/$key" );
+	say "promote: s3://$ENV{ARTIFACTS_BUCKET}/$key";
+
+	return;
+}
+
 # main(@argv):
 #	The verb dispatcher.
 sub main (@argv)
 {
 	my $verb = shift @argv // die $USAGE;
-	my $name;
-	GetOptionsFromArray( \@argv, 'name=s' => \$name ) or die $USAGE;
+	my ( $name, $run_id );
+	GetOptionsFromArray(
+		\@argv,
+		'name=s'   => \$name,
+		'run-id=s' => \$run_id,
+	) or die $USAGE;
+	die $USAGE if defined $run_id && $verb ne 'promote';
+
+	if ( $verb eq 'promote' && defined $run_id ) {
+		die $USAGE unless defined $name;
+		_promote_stackless( $name, $run_id );
+		return 0;
+	}
 
 	my $ip = _ip();
 	_push($ip);
