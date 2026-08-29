@@ -141,7 +141,7 @@ sub _uv ()
 }
 
 # _config():
-#	Read train/config.env into %ENV. The stackless promote needs
+#	Read train/config.env into %ENV. The promote verb needs
 #	the bucket names on the local host; a remote step reads the
 #	file on the instance instead.
 sub _config ()
