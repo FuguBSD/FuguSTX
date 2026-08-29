@@ -216,7 +216,9 @@ apply to every entry.
   metric — ewt LAS 0.7725 versus 0.7488, gum LAS 0.7652 versus 0.7555 — and cuts
   the parse failures (ewt 80→47, gum 25→19). The campaign promotes `sft-cpt`,
   and training.md keeps the CPT pass. Scope: one run, dev split, 0.6B, UD r2.18,
-  llama b10666. Maps to: FuguTTX TRN-CPT, FuguTTX D4.
+  llama b10666. The comparison isolates the CPT increment: no scorecard measures
+  the base model without SFT, so the SFT gain itself is unmeasured. Maps to:
+  FuguTTX TRN-CPT, FuguTTX D4.
 - **Axolotl in Docker and the checkpoint sync work.** Cloud-init pre-pulls the
   Axolotl image (`main-20260827-py3.12-cu130-2.12.1`) during the SSH wait, and
   the AWS bundled installer supplies awscli, which Ubuntu Noble does not
