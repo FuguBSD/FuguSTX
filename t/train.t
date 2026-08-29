@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # ex:ts=8 sw=4:
-# Guards for the stackless promote of scripts/train. A stub aws on
+# Guards for the promote verb of scripts/train. A stub aws on
 # the PATH stands in place of Object Storage: it logs each call, and
 # it materializes each download.
 
@@ -58,7 +58,7 @@ sub _train ( $argv, %options )
 	return ( $output, $status, \@lines );
 }
 
-subtest 'the stackless promote copies and verifies' => sub {
+subtest 'the promote copies and verifies' => sub {
 	my ( $output, $status, $calls ) = _train(
 		'promote --name sft-cpt --run-id run-1',
 		name => 'happy',
@@ -101,6 +101,13 @@ subtest 'the option guards hold' => sub {
 	);
 	isnt( $status, 0, 'promote needs --name' );
 	is( scalar @$calls, 0, 'no S3 call' );
+
+	( $output, $status, $calls ) = _train(
+		'promote --name sft-cpt',
+		name => 'no-run-id',
+	);
+	isnt( $status, 0, 'promote needs --run-id' );
+	is( scalar @$calls, 0, 'no S3 call without a run' );
 
 	( $output, $status, $calls ) = _train(
 		'gguf --name sft-cpt --run-id run-1',

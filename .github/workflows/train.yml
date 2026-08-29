@@ -40,7 +40,7 @@ on:
           - sft-base
           - sft-cpt
       run_id:
-        description: The run identifier, for a promote after a teardown
+        description: The run identifier, for promote
         required: false
 
 # One concurrency group serializes each train stack change. A
@@ -122,16 +122,16 @@ jobs:
         run: |
           scripts/train score --name '${{ inputs.name }}'
 
-      # With a run_id input, the promote runs on the runner, from the
-      # checkpoint bucket. It needs no instance after a teardown.
+      # The promote runs on the runner, from the checkpoint bucket.
+      # It needs no instance, and the scorecard hash gates the copy.
       - name: Promote the artifact
         if: inputs.action == 'promote'
         run: |
-          if [ -n "$RUN_ID_INPUT" ]; then
-            scripts/train promote --name ${{ inputs.name }} --run-id "$RUN_ID_INPUT"
-          else
-            scripts/train promote --name ${{ inputs.name }}
+          if [ -z "$RUN_ID_INPUT" ]; then
+            echo "the promote action needs the run_id input"
+            exit 1
           fi
+          scripts/train promote --name ${{ inputs.name }} --run-id "$RUN_ID_INPUT"
 
       - name: Stack down
         if: inputs.action == 'down'

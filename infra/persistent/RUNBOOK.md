@@ -83,14 +83,23 @@ is an ed25519 pair with the fingerprint
 its public half as an IAM SSH key, and the key agent of the image installs it on
 root at boot; only the CI secret holds the private half.
 
-Two human steps stay open:
+The operator applied the stack on 2026-08-28, in three steps around the first
+campaign. The pipeline policy gained `IAMApplicationManager`, so the CI up job
+mints the train key. The campaign then added `BlockStorageFullAccess`: an SBS
+root volume writes through the Block Storage API. It also added
+`SSHKeysFullAccess`: the train stack registers the campaign key as an IAM
+resource. [The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each
+probe.
 
-1. Apply this stack: the pipeline policy change adds `IAMApplicationManager`, so
-   the CI up job can mint the train key. A probe on 2026-08-28 proved the
-   permission set covers api-key create and delete.
-2. Create the `infra-apply` environment with a main-only deployment branch
-   policy, and move the three secrets and the two variables into it. Until then,
-   the repository scope serves the same workflows.
+The CI forecast check ran with the pipeline key during the campaign, and the
+gate passed, which closes the pipeline billing-read probe. The LEARNING entries
+record the printed forecast and the live price.
+
+One human step stays open:
+
+1. The `infra-apply` environment exists with a main-only deployment branch
+   policy, and it holds the two variables. Move the three secrets into it. Until
+   then, the repository scope serves the same workflows.
 
 The price table of [training.md](../../spec/training.md#trn-inst) holds the
 2026-08-28 price read.

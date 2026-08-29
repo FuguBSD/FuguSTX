@@ -19,8 +19,8 @@ runbook.
 
 - **TRN-INST-1** — The pipeline must read the live price before it creates a
   resource.
-- **TRN-INST-2** — [LEARNING](LEARNING.md#lrn-deliver) must record the response
-  time of the quota request.
+- **TRN-INST-2** — [LEARNING](LEARNING.md#lrn-deliver) must record the quota
+  state of each declared offer, and the response time of each quota request.
 
 <a id="trn-cpt"></a>
 
@@ -82,8 +82,9 @@ The judge filter applies three checks to each proposed record:
 
 ## Execution
 
-A destroy loses at most one epoch, which is minutes at this scale. Rehearses:
-FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
+A destroy loses at most one epoch, which is minutes at this scale. The gguf step
+uploads each converted artifact to the checkpoint bucket at once, so the promote
+step needs no instance. Rehearses: FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
 
 - **TRN-EXEC-1** — Training must run in the published Axolotl CUDA Docker image.
 - **TRN-EXEC-2** — Every configuration must live in the repository.
@@ -91,6 +92,9 @@ FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
   provisioned instance.
 - **TRN-EXEC-4** — Checkpoints must synchronize to Object Storage after each
   epoch.
+- **TRN-EXEC-5** — The promote step must copy the scored GGUF from the
+  checkpoint bucket to the artifacts bucket, and the artifact must match the dev
+  scorecard `model_hash`.
 
 <a id="trn-budget"></a>
 
