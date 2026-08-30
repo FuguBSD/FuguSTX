@@ -88,8 +88,17 @@ requirement, not a hope. Details: [engine](engine.md).
 
 <a id="t11"></a>
 
-## T11 — The learning is a deliverable
+## T11 — The learning is a deliverable, in two records
 
-Every campaign ends with a LEARNING entry that maps its outcome to FuguTTX spec
-units. A learning that contradicts the FuguTTX spec must become a FuguTTX spec
-change, not a note. Details: [learning](LEARNING.md).
+The learning of G2 lives in two records, and each one has one job.
+
+The library is the working record. It is the shared repository FuguBSD/Wiki, and
+it holds every observation and every admitted claim of every campaign. An
+observation reaches a commit there at capture time, so a crash loses nothing.
+
+This ledger is the delivered record. It receives one batch for each campaign, at
+the closing pull request. A batch cites the library pages that hold its
+evidence, and it holds no per-entry prose.
+
+A learning that contradicts the FuguTTX specification must become a FuguTTX
+specification change, not a note. Details: [learning](LEARNING.md).
