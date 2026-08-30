@@ -14,7 +14,8 @@ my $stub = "$dir/bin";
 mkdir $stub or die $!;
 
 # The curl stub logs its argument list, and it answers with the HTTP
-# code of STX_STUB_HTTP_CODE.
+# code of STX_STUB_HTTP_CODE. STX_STUB_HEALTH_FAIL fails a health
+# probe, for the teach-serve timeout path.
 open my $fh, '>', "$stub/curl" or die $!;
 print $fh <<'STUB';
 #!/usr/bin/env perl
@@ -22,10 +23,25 @@ use v5.36;
 open my $log, '>>', $ENV{STX_STUB_LOG} or die $!;
 say $log join "\x{1}", @ARGV;
 close $log;
+exit 22 if $ENV{STX_STUB_HEALTH_FAIL} && grep { m{/health} } @ARGV;
 print $ENV{STX_STUB_HTTP_CODE} // 200;
 STUB
 close $fh;
 chmod 0755, "$stub/curl";
+
+# The docker stub logs its argument list. STX_STUB_DOCKER_FAIL fails
+# a `docker run`, for the failed-start path.
+open my $docker, '>', "$stub/docker" or die $!;
+print $docker <<'STUB';
+#!/usr/bin/env perl
+use v5.36;
+open my $log, '>>', $ENV{STX_STUB_LOG} or die $!;
+say $log "docker @ARGV";
+close $log;
+exit 1 if $ENV{STX_STUB_DOCKER_FAIL} && $ARGV[0] eq 'run';
+STUB
+close $docker;
+chmod 0755, "$stub/docker";
 
 open my $env, '>', "$dir/train.env" or die $!;
 print $env <<'ENV';
@@ -49,7 +65,8 @@ sub _driver ( $command, %options )
 	local $ENV{STX_STUB_HTTP_CODE}     = $options{http_code} // 200;
 	local $ENV{STX_TRAIN_ENV}          = "$dir/train.env";
 	local $ENV{STX_CLAIM_MARKER}       = $options{marker};
-	local $ENV{STX_HEARTBEAT_PID}      = "$dir/heartbeat-$options{name}.pid";
+	local $ENV{STX_HEARTBEAT_PID}      = $options{pid}
+	    // "$dir/heartbeat-$options{name}.pid";
 	local $ENV{STX_HEARTBEAT_INTERVAL} = 0.1;
 
 	my $output = qx{$^X $root/scripts/train-driver $command 2>&1};
@@ -171,6 +188,66 @@ subtest 'the heartbeat writer repeats on its interval' => sub {
 	my @lines = <$calls>;
 	close $calls;
 	cmp_ok( scalar @lines, '>=', 2, 'at least two heartbeat writes' );
+};
+
+subtest 'teach-serve claims, serves on localhost, and beats' => sub {
+	my $pid = "$dir/heartbeat-teach.pid";
+	my ( $output, $status, $calls ) = _driver(
+		'teach-serve',
+		name   => 'teach-serve',
+		marker => "$dir/teach-marker",
+		pid    => $pid,
+	);
+	is( $status, 0, 'exit 0' ) or diag $output;
+	ok( -f "$dir/teach-marker", 'the stack is claimed' );
+	my ($run) = grep { /^docker run/ } @$calls;
+	like( $run, qr/--name stx-vllm/,          'the teacher container' );
+	like( $run, qr/-p 127\.0\.0\.1:8000:8000/, 'bound to localhost' );
+	like( $run, qr{vllm/vllm-openai:},         'the pinned vLLM image' );
+	like( $run, qr/Qwen3-32B-FP8/,             'the pinned checkpoint' );
+	ok( -f $pid, 'the heartbeat runs until teach-stop' );
+
+	( $output, $status, $calls ) = _driver(
+		'teach-stop',
+		name   => 'teach-stop',
+		marker => "$dir/teach-marker",
+		pid    => $pid,
+	);
+	is( $status, 0, 'teach-stop exits 0' ) or diag $output;
+	ok( ( grep { /^docker rm -f stx-vllm/ } @$calls ),
+		'the container is gone' );
+	ok( !-f $pid, 'the heartbeat stops' );
+};
+
+subtest 'a failed teacher start does not hold the stack' => sub {
+	local $ENV{STX_STUB_DOCKER_FAIL} = 1;
+	my $pid = "$dir/heartbeat-nostart.pid";
+	my ( $output, $status ) = _driver(
+		'teach-serve',
+		name   => 'teach-nostart',
+		marker => "$dir/nostart-marker",
+		pid    => $pid,
+	);
+	isnt( $status, 0, 'exit non-zero' );
+	like( $output, qr/failed to start/, 'the reason' );
+	ok( !-f $pid, 'the heartbeat stops, so the watchdog can reap' );
+};
+
+subtest 'a dead teacher does not hold the stack' => sub {
+	local $ENV{STX_TEACH_SERVE_TRIES} = 1;
+	local $ENV{STX_STUB_HEALTH_FAIL}  = 1;
+	my $pid = "$dir/heartbeat-dead.pid";
+	my ( $output, $status, $calls ) = _driver(
+		'teach-serve',
+		name   => 'teach-dead',
+		marker => "$dir/dead-marker",
+		pid    => $pid,
+	);
+	isnt( $status, 0, 'exit non-zero' );
+	like( $output, qr/did not answer/, 'the reason' );
+	ok( !-f $pid, 'the heartbeat stops, so the watchdog can reap' );
+	my @removes = grep { /^docker rm -f stx-vllm/ } @$calls;
+	cmp_ok( scalar @removes, '>=', 2, 'the container is swept' );
 };
 
 done_testing();

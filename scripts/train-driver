@@ -27,6 +27,8 @@
 #        train-driver gguf --input DIR --output FILE
 #        train-driver serve --model FILE
 #        train-driver serve-stop
+#        train-driver teach-serve
+#        train-driver teach-stop
 #        train-driver put --file FILE --key KEY [--bucket NAME]
 #
 # The driver claims the stack once, with an If-None-Match conditional
@@ -62,6 +64,8 @@ usage: train-driver claim
        train-driver gguf --input DIR --output FILE
        train-driver serve --model FILE
        train-driver serve-stop
+       train-driver teach-serve
+       train-driver teach-stop
        train-driver put --file FILE --key KEY [--bucket NAME]
 EOF
 
@@ -295,6 +299,10 @@ sub cmd_train (@argv)
 	cmd_claim();
 	cmd_heartbeat('start');
 
+	# The teacher holds the GPU memory that Axolotl needs, so a
+	# training pass sweeps a leftover teacher container first.
+	_run( 'docker', 'rm', '-f', 'stx-vllm' );
+
 	# The checkpoint watcher pushes each finished epoch while the
 	# next one trains, so a destroy loses at most one epoch.
 	my $interval = $ENV{STX_SYNC_INTERVAL} // 60;
@@ -445,6 +453,63 @@ sub cmd_serve_stop ()
 	return 0;
 }
 
+# cmd_teach_serve():
+#	vLLM serves the teacher on the instance, in Docker, bound to
+#	localhost (TRN-TEACH-1, TRN-TEACH-2). The claim and the
+#	heartbeat come first: the FP8 download and load pass the idle
+#	window, and the watchdog destroys a stack with a stale
+#	heartbeat. The heartbeat runs until teach-stop.
+sub cmd_teach_serve ()
+{
+	cmd_claim();
+	cmd_heartbeat('start');
+	_run( 'docker', 'rm', '-f', 'stx-vllm' );
+	my ( $output, $failed ) = _run(
+		'docker', 'run', '-d', '--name', 'stx-vllm',
+		'--gpus', 'all',
+		'-p', '127.0.0.1:8000:8000',
+		'-v', '/scratch/hf:/root/.cache/huggingface',
+		$ENV{VLLM_IMAGE},
+		'--model', $ENV{TEACHER_MODEL},
+		'--host', '0.0.0.0', '--port', '8000',
+		'--max-model-len', '8192',
+	);
+	if ($failed) {
+
+		# A failed start must not hold the stack: the heartbeat
+		# keeps the watchdog away from a billed instance.
+		cmd_heartbeat('stop');
+		die "train-driver: the teacher container failed to start\n";
+	}
+	my $tries = $ENV{STX_TEACH_SERVE_TRIES} // 240;
+	for my $try ( 1 .. $tries ) {
+		my ( undef, $status ) =
+		    _run( 'curl', '-sf', 'http://127.0.0.1:8000/health' );
+		if ( $status == 0 ) {
+			say 'teach-serve: vLLM answers on 127.0.0.1:8000';
+			return 0;
+		}
+		sleep 15 if $try < $tries;
+	}
+
+	# A dead teacher must not hold the stack: without the cleanup,
+	# the heartbeat keeps the watchdog away from a billed instance.
+	_run( 'docker', 'rm', '-f', 'stx-vllm' );
+	cmd_heartbeat('stop');
+	die "train-driver: vLLM did not answer\n";
+}
+
+# cmd_teach_stop():
+#	Stop the teacher. This must run before a training pass: the
+#	teacher holds the GPU memory that Axolotl needs.
+sub cmd_teach_stop ()
+{
+	_run( 'docker', 'rm', '-f', 'stx-vllm' );
+	cmd_heartbeat('stop');
+
+	return 0;
+}
+
 sub cmd_put (@argv)
 {
 	my ( $file, $key, $bucket );
@@ -482,6 +547,8 @@ sub main (@argv)
 	return cmd_gguf(@argv)           if $command eq 'gguf';
 	return cmd_serve(@argv)          if $command eq 'serve';
 	return cmd_serve_stop()          if $command eq 'serve-stop';
+	return cmd_teach_serve()         if $command eq 'teach-serve';
+	return cmd_teach_stop()          if $command eq 'teach-stop';
 	return cmd_put(@argv)            if $command eq 'put';
 	die $USAGE;
 }

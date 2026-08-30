@@ -1,0 +1,36 @@
+# The SFT pass from the merged CPT base, on the treebank pairs plus
+# the accepted augmentation records (TRN-SFT-1). The teach batches
+# build /scratch/corpus/pairs-aug.jsonl, and only the judge filter
+# admits a record into it (COR-AUG-1). teach-stop must run before this
+# pass: the teacher holds the GPU memory that Axolotl needs.
+base_model: /scratch/outputs/cpt-merged
+
+load_in_4bit: true
+adapter: qlora
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_linear: true
+
+datasets:
+  - path: /scratch/corpus/pairs-aug.jsonl
+    type: input_output
+dataset_prepared_path: /scratch/prepared/sft-aug
+output_dir: /scratch/outputs/sft-aug
+
+sequence_len: 2048
+sample_packing: true
+micro_batch_size: 8
+gradient_accumulation_steps: 2
+
+num_epochs: 2
+learning_rate: 0.0002
+lr_scheduler: cosine
+warmup_ratio: 0.03
+optimizer: adamw_torch
+
+bf16: true
+tf32: true
+gradient_checkpointing: true
+logging_steps: 10
+saves_per_epoch: 1

@@ -94,7 +94,8 @@ infra-watchdog:
 .PHONY: infra-status infra-cost infra-watchdog
 
 # The training runs (TRN-EXEC-3), against a provisioned instance.
-# SFT_FROM selects the SFT start point: base, or cpt (decision T4).
+# SFT_FROM selects the SFT start point: base, cpt, or aug
+# (decision T4, TRN-SFT-1).
 SFT_FROM ?= base
 
 train-cpt:

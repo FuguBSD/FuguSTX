@@ -14,10 +14,14 @@ on:
         required: true
         options:
           - up
+          - teach-serve
+          - teach
+          - teach-stop
           - cpt
           - merge-cpt
           - sft-base
           - sft-cpt
+          - sft-aug
           - gguf
           - score
           - promote
@@ -39,8 +43,9 @@ on:
         options:
           - sft-base
           - sft-cpt
+          - sft-aug
       run_id:
-        description: The run identifier, for promote
+        description: The run identifier, for teach and promote
         required: false
 
 # One concurrency group serializes each train stack change. A
@@ -95,6 +100,31 @@ jobs:
         run: |
           make infra-up STACK=train TRAIN_OFFER='${{ inputs.offer }}' TRAIN_HOURS="$TRAIN_HOURS_INPUT"
 
+      - name: Serve the teacher
+        if: inputs.action == 'teach-serve'
+        run: scripts/train teach-serve
+
+      # The generation client and the judge filter run on the runner,
+      # over the tunnel (TRN-TEACH-3), so the teach step needs uv.
+      - name: Setup uv
+        if: inputs.action == 'teach'
+        uses: FuguBSD/Tooling/python/actions/setup-uv@main
+
+      - name: Teach one batch
+        if: inputs.action == 'teach'
+        run: |
+          if [ -z "$RUN_ID_INPUT" ]; then
+            echo "the teach action needs the run_id input"
+            exit 1
+          fi
+          scripts/train teach --run-id "$RUN_ID_INPUT"
+
+      # teach-stop must run before a training pass: the teacher holds
+      # the GPU memory that Axolotl needs.
+      - name: Stop the teacher
+        if: inputs.action == 'teach-stop'
+        run: scripts/train teach-stop
+
       - name: CPT rehearsal
         if: inputs.action == 'cpt'
         run: make train-cpt
@@ -110,6 +140,10 @@ jobs:
       - name: SFT from the CPT output
         if: inputs.action == 'sft-cpt'
         run: make train-sft SFT_FROM=cpt
+
+      - name: SFT from the merged CPT base, plus augmentation
+        if: inputs.action == 'sft-aug'
+        run: make train-sft SFT_FROM=aug
 
       - name: Merge and convert to GGUF
         if: inputs.action == 'gguf'
