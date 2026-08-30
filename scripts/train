@@ -20,8 +20,11 @@
 #
 # usage: train cpt
 #        train merge-cpt
-#        train sft-base | train sft-cpt
-#        train gguf --name sft-base|sft-cpt
+#        train sft-base | train sft-cpt | train sft-aug
+#        train teach-serve
+#        train teach --run-id RUN [--batch NAME] [--count N]
+#        train teach-stop
+#        train gguf --name NAME
 #        train score --name NAME
 #        train promote --name NAME --run-id RUN
 #
@@ -37,6 +40,14 @@
 # once, so promote copies it from there to the artifacts bucket, and
 # the dev scorecard hash gates the copy (TRN-EXEC-5).
 #
+# The teach verb opens an SSH tunnel to the teacher endpoint, with
+# keepalives (TRN-TEACH-3): the runner NAT kills a quiet SSH stream.
+# The generation client and the judge filter run on this host, and
+# only an accepted record reaches the corpus bucket (COR-AUG-1). One
+# dispatch runs one bounded batch, and the run prefix makes the
+# batches resumable. The teach verbs follow the gguf pattern: no make
+# target, outside the training runs of TRN-EXEC-3.
+#
 # Like scripts/deps, core modules only, and v5.34.
 
 use v5.34;
@@ -45,6 +56,7 @@ use experimental 'signatures';
 
 use Digest::SHA    ();
 use File::Basename qw(dirname);
+use File::Path     qw(make_path);
 use File::Spec     ();
 use File::Temp     ();
 use Getopt::Long   qw(GetOptionsFromArray);
@@ -52,8 +64,11 @@ use Getopt::Long   qw(GetOptionsFromArray);
 my $USAGE = <<'EOF';
 usage: train cpt
        train merge-cpt
-       train sft-base | train sft-cpt
-       train gguf --name sft-base|sft-cpt
+       train sft-base | train sft-cpt | train sft-aug
+       train teach-serve
+       train teach --run-id RUN [--batch NAME] [--count N]
+       train teach-stop
+       train gguf --name NAME
        train score --name NAME
        train promote --name NAME --run-id RUN
 EOF
@@ -209,18 +224,150 @@ sub _promote ( $name, $run_id )
 	return;
 }
 
+# _uv_run(@argv):
+#	One local uv call, from the repository root: the workspace
+#	lockfile lives there.
+sub _uv_run (@argv)
+{
+	system( 'uv', 'run', '--locked', '--project', $ROOT,
+		'python', '-m', @argv ) == 0
+	    or die "train: the local step failed: @argv\n";
+
+	return;
+}
+
+# _teach($ip, $run_id, $batch, $count):
+#	One bounded teach batch, under the six-hour job limit. The
+#	tunnel carries the endpoint to this host (TRN-TEACH-3), the
+#	client proposes, the filter disposes, and the uploads land
+#	under the run prefix. The batch name makes the run resumable:
+#	each batch adds one accepted file, and the pairs rebuild reads
+#	every accepted file of the run.
+sub _teach ( $ip, $run_id, $batch, $count )
+{
+	my $dir = "$ROOT/explore/teach/$run_id-$batch";
+	make_path("$dir/accepted");
+
+	# The remote side claims the stack and beats the heartbeat, as
+	# the train driver does. Both calls are idempotent: teach-serve
+	# started the writer already.
+	_remote( $ip,
+		      'scripts/train-driver claim && '
+		    . 'scripts/train-driver heartbeat start' );
+
+	# A control socket path must stay short: the platform caps a
+	# Unix socket path near 100 bytes.
+	my @ssh    = _ssh_argv($ip);
+	my $socket = File::Temp::tempdir( CLEANUP => 1 ) . '/t';
+	pop @ssh;    # the address goes after the tunnel options
+	# A taken local port must fail loudly, not give a dead forward.
+	system( @ssh,
+		'-o', 'ExitOnForwardFailure=yes',
+		'-M', '-S', $socket, '-f', '-N',
+		'-L', '8000:127.0.0.1:8000', "root\@$ip" ) == 0
+	    or die "train: the tunnel to $ip failed\n";
+
+	my $status = eval {
+		_aws( 'cp', "s3://$ENV{CORPUS_BUCKET}/training.jsonl",
+			"$dir/training.jsonl" );
+		_uv_run(
+			'stx_corpus.teacher',
+			'--endpoint', 'http://127.0.0.1:8000',
+			'--model',    $ENV{TEACHER_MODEL},
+			'--records',  "$dir/training.jsonl",
+			'--count',    $count,
+			'--run-id',   $run_id,
+			'--batch',    $batch,
+			'--out',      "$dir/proposals.jsonl",
+		);
+		_uv_run(
+			'stx_corpus.judge',
+			'--proposals', "$dir/proposals.jsonl",
+			'--model',     $ENV{TEACHER_MODEL},
+			'--accepted',  "$dir/accepted.jsonl",
+			'--rejects',   "$dir/rejects.jsonl",
+			'--report',    "$dir/report.json",
+		);
+
+		# Only an accepted record reaches the corpus bucket
+		# (COR-AUG-1). The reject log and the rate report go to
+		# the artifacts bucket, under the same prefix.
+		my $prefix = "runs/$run_id";
+		_aws( 'cp', "$dir/accepted.jsonl",
+			"s3://$ENV{CORPUS_BUCKET}/$prefix/accepted-$batch.jsonl"
+		);
+		_aws( 'cp', "$dir/rejects.jsonl",
+			"s3://$ENV{ARTIFACTS_BUCKET}/$prefix/teach-rejects-$batch.jsonl"
+		);
+		_aws( 'cp', "$dir/report.json",
+			"s3://$ENV{ARTIFACTS_BUCKET}/$prefix/teach-report-$batch.json"
+		);
+
+		# Rebuild the pairs from every accepted batch of the run,
+		# and upload them for the sft-aug pass (TRN-SFT-1).
+		_aws(
+			'cp', "s3://$ENV{CORPUS_BUCKET}/$prefix/",
+			"$dir/accepted/", '--recursive',
+			'--exclude', '*', '--include', 'accepted-*.jsonl',
+		);
+		# A sentence that two batches both propose enters the
+		# pairs once: the text field keys the duplicate drop.
+		open my $all, '>', "$dir/accepted-all.jsonl"
+		    or die "train: write $dir/accepted-all.jsonl: $!\n";
+		my %seen;
+		for my $file ( sort glob "$dir/accepted/accepted-*.jsonl" ) {
+			open my $in, '<', $file
+			    or die "train: read $file: $!\n";
+			while ( my $line = <$in> ) {
+				my ($text) =
+				    $line =~ m{"text": ?"((?:[^"\\]|\\.)*)"};
+				next if defined $text && $seen{$text}++;
+				print {$all} $line;
+			}
+			close $in;
+		}
+		close $all;
+		_uv_run(
+			'stx_corpus.pairs',
+			'--augmentation', "$dir/accepted-all.jsonl",
+			'--output',       "$dir/pairs-aug.jsonl",
+		);
+		_aws( 'cp', "$dir/pairs-aug.jsonl",
+			"s3://$ENV{CORPUS_BUCKET}/pairs-aug.jsonl" );
+		1;
+	};
+	my $error = $@;
+	system( @ssh, '-S', $socket, '-O', 'exit', "root\@$ip" );
+	die $error unless $status;
+	say "teach: batch $batch of run $run_id is uploaded";
+
+	return;
+}
+
 # main(@argv):
 #	The verb dispatcher.
 sub main (@argv)
 {
 	my $verb = shift @argv // die $USAGE;
-	my ( $name, $run_id );
+	my ( $name, $run_id, $batch, $count );
 	GetOptionsFromArray(
 		\@argv,
 		'name=s'   => \$name,
 		'run-id=s' => \$run_id,
+		'batch=s'  => \$batch,
+		'count=i'  => \$count,
 	) or die $USAGE;
-	die $USAGE if defined $run_id && $verb ne 'promote';
+	die $USAGE
+	    if defined $run_id && $verb ne 'promote' && $verb ne 'teach';
+	die $USAGE
+	    if ( defined $batch || defined $count ) && $verb ne 'teach';
+	die $USAGE if $verb eq 'teach' && !defined $run_id;
+
+	# A run or batch name reaches a glob, a path, and an S3 key, so
+	# it must stay one word.
+	die "train: a run or batch name must match [\\w.-]+\n"
+	    if ( defined $run_id && $run_id !~ /^[\w.-]+\z/ )
+	    || ( defined $batch  && $batch !~ /^[\w.-]+\z/ );
 
 	if ( $verb eq 'promote' ) {
 		die $USAGE unless defined $name && defined $run_id;
@@ -245,11 +392,29 @@ sub main (@argv)
 			    . '--output /scratch/outputs/cpt-merged' );
 		return 0;
 	}
-	if ( $verb eq 'sft-base' || $verb eq 'sft-cpt' ) {
+	if ( $verb eq 'sft-base' || $verb eq 'sft-cpt' || $verb eq 'sft-aug' )
+	{
 		_remote( $ip,
 			      'scripts/train-driver sync-corpus && '
 			    . "scripts/train-driver train --config train/$verb.yml"
 		);
+		return 0;
+	}
+	if ( $verb eq 'teach-serve' ) {
+		_remote( $ip, 'scripts/train-driver teach-serve' );
+		return 0;
+	}
+	if ( $verb eq 'teach-stop' ) {
+		_remote( $ip, 'scripts/train-driver teach-stop' );
+		return 0;
+	}
+	if ( $verb eq 'teach' ) {
+		_config();
+		$batch //=
+		    defined $ENV{GITHUB_RUN_ID}
+		    ? "gh-$ENV{GITHUB_RUN_ID}"
+		    : 'batch-' . time;
+		_teach( $ip, $run_id, $batch, $count // 200 );
 		return 0;
 	}
 	if ( $verb eq 'gguf' ) {

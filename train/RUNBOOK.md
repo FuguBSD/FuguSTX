@@ -19,14 +19,14 @@ The campaign dispatches through `.github/workflows/train.yml`, with
 `gh workflow run train.yml -f action=<verb>`. The twelve `make infra-*` verbs
 come from the synced `infra/CLAUDE.md`, and they are the same in every project.
 
-| Stage      | Verb of this project                        | Where                 |
-| ---------- | ------------------------------------------- | --------------------- |
-| `infra`    | `up`, and the twelve `make infra-*` targets | `train.yml`, `mk/`    |
-| `corpus`   | the bucket sync of `CORPUS_BUCKET`          | `spec/corpus.md`      |
-| `train`    | `cpt`, `merge-cpt`, `sft-base`, `sft-cpt`   | `train.yml`           |
-| `evaluate` | `score`, and the tier T1 sweep              | `train.yml`, `t1.yml` |
-| `promote`  | `promote`                                   | `train.yml`           |
-| `teardown` | `down`                                      | `train.yml`           |
+| Stage      | Verb of this project                                                         | Where                         |
+| ---------- | ---------------------------------------------------------------------------- | ----------------------------- |
+| `infra`    | `up`, and the twelve `make infra-*` targets                                  | `train.yml`, `mk/`            |
+| `corpus`   | `teach-serve`, `teach`, `teach-stop`, and the bucket sync of `CORPUS_BUCKET` | `train.yml`, `spec/corpus.md` |
+| `train`    | `cpt`, `merge-cpt`, `sft-base`, `sft-cpt`, `sft-aug`                         | `train.yml`                   |
+| `evaluate` | `score`, and the tier T1 sweep                                               | `train.yml`, `t1.yml`         |
+| `promote`  | `promote`                                                                    | `train.yml`                   |
+| `teardown` | `down`                                                                       | `train.yml`                   |
 
 ## What this project omits
 
