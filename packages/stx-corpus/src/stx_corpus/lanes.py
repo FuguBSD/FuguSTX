@@ -20,9 +20,9 @@ class LaneLeakageError(RuntimeError):
 class Record:
     """One training pair, with its provenance."""
 
-    source: str  # "ewt" | "gum" | "pud" | "prose"
+    source: str  # "ewt" | "gum" | "pud" | "prose" | "teacher"
     split: str  # "train" | "dev" | "test"
-    tag: str  # the UD release tag, or a Gutenberg ebook ID
+    tag: str  # the UD release tag, a Gutenberg ebook ID, or the teacher checkpoint
     sentence: Sentence
 
 
