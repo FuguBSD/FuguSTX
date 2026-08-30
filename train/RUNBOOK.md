@@ -44,13 +44,3 @@ This project omits no stage. It runs a CPT pass, and it has a promote step.
   thresholds.
 - **The lease.** The `hours` input of `train.yml` sets the `stx:expires` tag.
   The watchdog reads it.
-
-## The rules that the observer set adds
-
-- Export this project's `.env` before any command that reaches Scaleway. The
-  `env` block of the workspace checkout shadows every project key (Workspace
-  D-05). Without the export, `tofu` bills the wrong Scaleway Project.
-- State the clone and the git HEAD that each step read. A stale clone does not
-  fail loudly.
-- A campaign observation goes to the learning library at capture time. The
-  ledger in `spec/LEARNING.md` receives one batch for each campaign.

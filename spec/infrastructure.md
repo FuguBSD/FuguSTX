@@ -43,7 +43,7 @@ applies these rules first, so FuguTTX inherits tested rules
   operator scope. The state-bucket policy must name each one. An agent
   application can be such a principal, as an exception to the smallest-scope
   rule of the synced instructions. Its key must expire after 7 days, and one
-  checkout must hold that key.
+  HOME profile must hold that key.
 
 <a id="iac-devhost"></a>
 

@@ -22,7 +22,7 @@ no stack declares it.
    exists. Every other quota stays unproven.
 3. The `stx.prod.claude` agent application, with its policy and its key. The
    policy takes the operator scope, per IAC-APPLY-7. Give the key a 7-day
-   expiry, and hold it in one checkout only. The CI apply retires this
+   expiry, and hold it in one HOME profile only. The CI apply retires this
    application.
 4. The `stx-tofu-state` bucket. Run `make infra-bootstrap`. `infra/bootstrap`
    declares the bucket, with versioning on and a 30-day noncurrent-version
@@ -39,33 +39,22 @@ no API key. Create a key by hand, on the application that needs it:
 scw iam api-key create application-id=<id> expires-at=<date>
 ```
 
-The provider reads the Scaleway variables. The S3 backend reads the AWS
-variables. Export the same key pair under both names:
+Put the key pair in a HOME profile of its own, per the
+[shared instructions](../CLAUDE.md#credentials), and name the profile on each
+command:
 
 ```sh
-export SCW_ACCESS_KEY=...
-export SCW_SECRET_KEY=...
-export SCW_DEFAULT_PROJECT_ID=...
-export SCW_DEFAULT_ORGANIZATION_ID=...
-export AWS_ACCESS_KEY_ID="$SCW_ACCESS_KEY"
-export AWS_SECRET_ACCESS_KEY="$SCW_SECRET_KEY"
+SCW_PROFILE=<profile> AWS_PROFILE=<profile> tofu plan ...
 ```
 
-`SCW_DEFAULT_PROJECT_ID` must name the `fugustx.prod` Project. The
+The default project of the profile must name the `fugustx.prod` Project. The
 `data "scaleway_account_project" "current"` source reads it, and every IAM
 policy scopes to it. A wrong value retargets the whole stack.
 
-A probe on 2026-08-25 tested the agent key. The key creates dev, train, and
-image resource types. The platform denied it the consumption read on that date.
-A probe on 2026-08-28 read the consumption with the same key, so the drift is
-closed. The console-made policy of the `stx.prod.claude` application carries the
-name `stx.prod.full`, and it holds `BillingManager` at organization scope.
-
-A probe on 2026-08-28 tested the delegation path of the pipeline key. The
-workspace operator key created and deleted an api-key on `stx.prod.pipeline`.
-The gh session wrote and removed a repository secret and an environment on
-FuguBSD/FuguSTX. An agent with these credentials can therefore mint the pipeline
-key and store it, on human approval.
+[The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each key and
+delegation probe. The console-made policy of the `stx.prod.claude` application
+carries the name `stx.prod.full`, and it holds `BillingManager` at organization
+scope.
 
 ## The campaign credentials, set 2026-08-28
 
@@ -83,17 +72,10 @@ is an ed25519 pair with the fingerprint
 its public half as an IAM SSH key, and the key agent of the image installs it on
 root at boot; only the CI secret holds the private half.
 
-The operator applied the stack on 2026-08-28, in three steps around the first
-campaign. The pipeline policy gained `IAMApplicationManager`, so the CI up job
-mints the train key. The campaign then added `BlockStorageFullAccess`: an SBS
-root volume writes through the Block Storage API. It also added
-`SSHKeysFullAccess`: the train stack registers the campaign key as an IAM
-resource. [The LEARNING entries](../../spec/LEARNING.md#lrn-entries) record each
-probe.
-
-The CI forecast check ran with the pipeline key during the campaign, and the
-gate passed, which closes the pipeline billing-read probe. The LEARNING entries
-record the printed forecast and the live price.
+The pipeline policy holds `IAMApplicationManager` (the CI up job mints the train
+key), `BlockStorageFullAccess` (an SBS root volume writes through the Block
+Storage API), and `SSHKeysFullAccess` (the train stack registers the campaign
+key as an IAM resource).
 
 One human step stays open:
 
