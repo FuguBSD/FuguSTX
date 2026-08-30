@@ -62,16 +62,29 @@ tunnel is the FuguTTX transport, rehearsed exactly. FuguTTX stakes its data
 quality on the same filter pattern, so the filter results are LEARNING entries.
 Rehearses: FuguTTX TRN-AUG.
 
+The served checkpoint is `Qwen/Qwen3-32B-FP8`, the official FP8 release. The
+BF16 weights hold near 65 GB, and the KV cache gets thin headroom on 80 GB.
+Every client request turns the Qwen3 thinking mode off, because the judge
+compares raw completions. The generation call samples at temperature 0.9, with a
+seed from the run and the batch. A re-run of one batch therefore repeats its
+sentences. The two annotation passes sample at temperature 0.2, with one fixed
+seed for each pass, and the distinct seeds keep the passes independent. A
+few-shot example in a teacher prompt must come from the train splits only.
+
 The judge filter applies three checks to each proposed record:
 
 1. Two independent teacher passes agree on the annotation.
 2. The dependency tree validates: one root, fully connected.
-3. Every tag is in the UD inventory, and
-   [the lexicon check](engine.md#eng-lexicon) passes.
+3. Every tag is in the inventory of `share/annotation.gbnf`, the record count
+   equals the token count, and the word-table check passes. The word table holds
+   each train-split word with its observed UPOS set: a known word must carry an
+   allowed UPOS, and an unknown word passes. The table is an interim source, not
+   the approved dictionary of [the lexicon](engine.md#eng-lexicon).
 
 - **TRN-TEACH-1** — vLLM must serve Qwen3-32B on the train instance.
 - **TRN-TEACH-2** — The endpoint must bind to localhost.
-- **TRN-TEACH-3** — The harness must reach the endpoint over an SSH tunnel.
+- **TRN-TEACH-3** — The generation client must reach the endpoint over an SSH
+  tunnel.
 - **TRN-TEACH-4** — The judge filter must accept a record only when the three
   checks pass.
 - **TRN-TEACH-5** — The filter must log each rejected record with its reason.
