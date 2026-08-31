@@ -44,6 +44,13 @@ job reads the table.
 - **EVL-TIERS-6** — The score script must match the scores of the
   [UD tools](https://github.com/UniversalDependencies/tools) scorer `eval.py` on
   UPOS, lemma, and LAS.
+- **EVL-TIERS-7** — One command must read each scorecard of the artifacts bucket
+  and print the scores. The command must not hold a threshold, because the
+  promotion review stays a human act.
+- **EVL-TIERS-8** — A scorecard key must take the form
+  `runs/<run identifier>/scorecard-<name>.json`. This document holds the one
+  definition of that form. Each component that writes such a key, or reads one,
+  must follow it.
 
 <a id="evl-suite"></a>
 

@@ -1,6 +1,7 @@
 import json
 
 from corpus_fakes import EWT_DEV, EWT_TEST, EWT_TRAIN, GUM_TRAIN, PUD_TEST
+from stx_corpus import upload as upload_module
 from stx_corpus.conllu import Sentence, parse_sentences
 from stx_corpus.lanes import Record, build_lanes
 from stx_corpus.upload import write_corpus_files, write_eval_files
@@ -33,6 +34,26 @@ def test_write_corpus_files_holds_the_training_lane_only(tmp_path):
     manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["ud_release"] == "r2.18"
     assert manifest["pairs"] == 3
+
+
+def test_upload_builds_one_client_for_every_file(monkeypatch, tmp_path):
+    # Each client call resolves the credential, so one client writes
+    # the corpus files and the eval files of one upload.
+    seen = {"built": [], "used": []}
+    monkeypatch.setattr(
+        upload_module.bucket, "client", lambda: seen["built"].append("client-0") or "client-0"
+    )
+    monkeypatch.setattr(
+        upload_module.bucket,
+        "put_file",
+        lambda name, key, path, s3=None: seen["used"].append((name, key, s3)),
+    )
+
+    upload_module.upload(_lanes(), tmp_path)
+
+    assert seen["built"] == ["client-0"]
+    assert [name for name, _, _ in seen["used"]] == ["stx-corpus"] * 4 + ["stx-evalcorpus"] * 2
+    assert {s3 for _, _, s3 in seen["used"]} == {"client-0"}
 
 
 def test_write_eval_files_holds_the_eval_lane_only(tmp_path):

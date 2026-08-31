@@ -34,6 +34,12 @@ from .lanes import Record, read_records
 
 ARTIFACTS_BUCKET = "stx-artifacts"
 
+#: The artifacts key layout of a scorecard (EVL-TIERS-8). The reader
+#: `cards.py` imports these names, so one definition serves the write
+#: and the read.
+RUNS_PREFIX = "runs/"
+CARD_NAME = "scorecard"
+
 #: The count fields of one treebank entry. The score rates derive from
 #: them at aggregation time, so shards stay mergeable.
 _COUNTS = ("sentences", "failures", "tokens", "upos", "lemma", "las")
@@ -151,6 +157,18 @@ def scorecard(counts: dict[str, dict[str, int]], meta: dict[str, Any]) -> dict[s
     return {**meta, "counts": counts, "scores": scores(counts)}
 
 
+def scorecard_key(card: dict[str, Any], aggregate: bool = False, shard: str | None = None) -> str:
+    """The artifacts key of one scorecard (EVL-TIERS-8). An aggregate
+    key names the tier, and a shard key names its part. The card holds
+    the shard, so a caller that passes the card alone gets the key of
+    that card."""
+    label = f"-{card['label']}" if card.get("label") else ""
+    shard = shard if shard is not None else card.get("shard")
+    part = f"-shard{shard.replace('/', 'of')}" if shard else ""
+    name = f"{CARD_NAME}-t1{label}" if aggregate else f"{CARD_NAME}-{card['split']}{label}{part}"
+    return f"{RUNS_PREFIX}{card['run_id']}/{name}.json"
+
+
 def aggregate(paths: list[Path]) -> dict[str, Any]:
     """Merge shard scorecards into one. Each pin must agree."""
     shards = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
@@ -213,13 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(text, encoding="utf-8")
     if args.upload:
-        label = f"-{card['label']}" if card.get("label") else ""
-        shard = f"-shard{args.shard.replace('/', 'of')}" if args.shard else ""
-        key = (
-            f"runs/{card['run_id']}/scorecard-t1{label}.json"
-            if args.aggregate
-            else f"runs/{card['run_id']}/scorecard-{args.split}{label}{shard}.json"
-        )
+        key = scorecard_key(card, aggregate=bool(args.aggregate), shard=args.shard)
         bucket.put_text(ARTIFACTS_BUCKET, key, text)
         print(f"upload: s3://{ARTIFACTS_BUCKET}/{key}")
     return 0

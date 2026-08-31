@@ -105,3 +105,24 @@ train-sft:
 	scripts/train sft-$(SFT_FROM)
 
 .PHONY: train-cpt train-sft
+
+# The scorecard read (EVL-TIERS-7). RUN narrows the read to one
+# campaign run. The bucket name comes from train/config.env, which
+# owns it (TRN-EXEC-2). The target stays outside make check: it needs
+# the network and a credential. Name the identity on the command line,
+# per the synced infra/CLAUDE.md:
+#
+#	AWS_PROFILE=<profile> make scorecards
+scorecards:
+	@. ./train/config.env; \
+	test -n "$$ARTIFACTS_BUCKET" || { \
+		echo "train/config.env names no ARTIFACTS_BUCKET"; exit 1; }; \
+	if [ -n '$(RUN)' ]; then \
+		$(UV) run --locked python -m stx_corpus.cards \
+		    --bucket "$$ARTIFACTS_BUCKET" --run '$(RUN)'; \
+	else \
+		$(UV) run --locked python -m stx_corpus.cards \
+		    --bucket "$$ARTIFACTS_BUCKET"; \
+	fi
+
+.PHONY: scorecards

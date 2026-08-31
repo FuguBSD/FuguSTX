@@ -191,10 +191,14 @@ version = "0.0.0"
 source = { editable = "packages/stx-corpus" }
 dependencies = [
     { name = "boto3" },
+    { name = "botocore" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "boto3", specifier = ">=1.35" }]
+requires-dist = [
+    { name = "boto3", specifier = ">=1.35" },
+    { name = "botocore", specifier = ">=1.35" },
+]
 
 [[package]]
 name = "urllib3"
