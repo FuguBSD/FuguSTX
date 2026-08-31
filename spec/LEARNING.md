@@ -118,6 +118,50 @@ Delivery: LRN-DELIVER-2 and LRN-DELIVER-3 stay open for this batch. The findings
 have not reached the FuguTTX `docs/research/` directory yet, and the
 contradictions have not become FuguTTX specification changes yet.
 
+### Batch 2 — the phase P4 teacher campaign, through 2026-08-31
+
+The campaign ran the teacher augmentation end to end, on the run
+`gh-33342320766`. The judge filter accepted 111 of 1200 proposed records, the
+sft-aug pass trained on them, and the promote gate kept `sft-cpt`.
+
+Outcome by FuguTTX unit:
+
+- **FuguTTX TRN-AUG, FuguTTX D4** — The teacher proposed six batches of 200, and
+  the filter accepted 111 of 1200, a rate of 0.0925 (per batch 0.055 to 0.135).
+  Check 1, the agreement of the two seeded annotation passes, rejected 149 to
+  160 records per batch. That gate rejects six times more than the other checks
+  together. The other rejects per batch: tag 7 to 14, tree 7 to 15, word 4 to
+  10, and count 0 to 1. The teacher repeats sentences across batch seeds at
+  temperature 0.9. The rebuild deduplication therefore absorbed 12 of the 96
+  accepted records of batches 2 to 6. An independent comparator, with a passed
+  sensitivity test, found zero overlap between the 111 accepted sentences and
+  the 4310 eval-lane records, verbatim and normalized. Evidence:
+  `Library-FuguSTX-teacher-augmentation`.
+- **FuguTTX TRN-AUG, the shared instructions** — The first serve on a fresh
+  instance took near six minutes: a 72 s image pull, then 290 s to the health
+  answer. The health answer alone confirms the FP8 fit. The driver starts the
+  container detached, and no verb fetches a container log, so the CI path
+  captures no GPU memory number. The container binds 127.0.0.1:8000 on the
+  instance, and the teach client reaches the endpoint over the SSH tunnel. A
+  driver log line prints the boot STX_RUN_ID, not the dispatching workflow run.
+  Evidence: `Library-FuguSTX-teacher-augmentation`,
+  `Library-FuguSTX-train-stack`.
+- **FuguTTX TRN-SFT, FuguTTX D4** — The sft-aug pass trained on 22222 pairs: 464
+  steps, train_runtime 813.5 s, and a loss from 2.881 to 0.0486. The tier T1
+  sweep passed eight of nine cells, and the ewt lemma cell failed by 0.0003. The
+  scores (UPOS/Lemma/LAS): ewt 0.9377/0.9506/0.7738, gum 0.9386/0.9569/0.7673,
+  and pud 0.9543/0.9637/0.7848. Evidence: `Library-FuguSTX-passes`.
+- **FuguTTX D5** — The promote gate blocked the promote on the one failed cell,
+  and `sft-cpt` stays the promoted artifact. Evidence:
+  `Library-FuguSTX-promotion`.
+- **FuguTTX IAC-PREREQ** — The campaign compute cost EUR 11.27: 3.93 hours at
+  EUR 2.8665 per hour, under the teacher-row estimate alone. Evidence:
+  `Library-FuguSTX-price`, `Library-FuguSTX-budget`, `Library-FuguSTX-watchdog`.
+
+Not rehearsed: FuguTTX IAC-IMAGE, and llama.cpp on OpenBSD.
+
+Delivery: LRN-DELIVER-2 and LRN-DELIVER-3 stay open for this batch.
+
 <a id="lrn-scope"></a>
 
 ## The scope of a claim
