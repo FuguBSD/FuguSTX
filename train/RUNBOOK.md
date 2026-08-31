@@ -24,7 +24,7 @@ come from the synced `infra/CLAUDE.md`, and they are the same in every project.
 | `infra`    | `up`, and the twelve `make infra-*` targets                                  | `train.yml`, `mk/`            |
 | `corpus`   | `teach-serve`, `teach`, `teach-stop`, and the bucket sync of `CORPUS_BUCKET` | `train.yml`, `spec/corpus.md` |
 | `train`    | `cpt`, `merge-cpt`, `sft-base`, `sft-cpt`, `sft-aug`                         | `train.yml`                   |
-| `evaluate` | `score`, and the tier T1 sweep                                               | `train.yml`, `t1.yml`         |
+| `evaluate` | `score`, the tier T1 sweep, and `make scorecards`                            | `train.yml`, `t1.yml`, `mk/`  |
 | `promote`  | `promote`                                                                    | `train.yml`                   |
 | `teardown` | `down`                                                                       | `train.yml`                   |
 

@@ -77,10 +77,13 @@ def write_eval_files(lanes: Lanes, directory: Path) -> list[Path]:
 
 
 def upload(lanes: Lanes, directory: Path) -> None:
+    # One client writes every file: each client call resolves the
+    # credential again.
+    s3 = bucket.client()
     for path in write_corpus_files(lanes, directory / "corpus"):
-        bucket.put_file(CORPUS_BUCKET, path.name, path)
+        bucket.put_file(CORPUS_BUCKET, path.name, path, s3)
     for path in write_eval_files(lanes, directory / "eval"):
-        bucket.put_file(EVAL_BUCKET, path.name, path)
+        bucket.put_file(EVAL_BUCKET, path.name, path, s3)
 
 
 def main(argv: list[str] | None = None) -> int:
