@@ -22,13 +22,19 @@ is the authoritative reference.
 ## Commands
 
 ```sh
-make deps        # install the Scaleway CLI
+make deps        # install gitleaks, the Scaleway CLI and OpenTofu
 make check       # every gate; run it before each commit
 ```
 
+`make deps` installs the `tool` environment before the `runtime` environment, so
+the gitleaks binary of the secret gate is present for each chain.
+`deps/SHA256.txt` records the sha256 digest of each versioned download, and
+`make deps` compares the downloaded bytes against it. The CI gate installs
+gitleaks with `make deps`, so one pin serves the operator gate and the CI gate.
+
 `make check` runs the Markdown format gate, and prettier runs through bunx. The
-operator installs bun and gitleaks, for example from Homebrew. No deps manifest
-provides them.
+operator installs bun, for example from Homebrew. The manifest does not provide
+it, because the format gate needs `bunx` before a target can run.
 
 ## Commit scopes
 
