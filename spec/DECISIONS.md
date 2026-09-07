@@ -20,28 +20,39 @@ Every output record carries the model hash. Details: [engine](engine.md).
 
 <a id="t3"></a>
 
-## T3 — Training: Axolotl QLoRA on a Scaleway H100, fully as code
+## T3 — Training: Axolotl on a Scaleway H100, fully as code
 
-Mirrors FuguTTX D3. The H100 is larger than a 0.6B run needs, and that is the
-point. The pilot exercises the H100 quota, the live price, and the train stack
-at low stakes. The L40S stays as the budget escape. Details:
-[training](training.md), [infrastructure](infrastructure.md).
+Mirrors FuguTTX D3 in the stack and the execution. The precision and the adapter
+follow the model size. A model that fits the GPU in bf16 with its optimizer
+states trains in bf16, as a full fine-tune or as a bf16 adapter. A 4-bit load is
+the memory escape for a model that does not fit. The H100 is larger than a 0.6B
+run needs, and that is the point. The pilot exercises the H100 quota, the live
+price, and the train stack at low stakes. The L40S stays as the budget escape.
+Details: [training](training.md), [infrastructure](infrastructure.md).
 
 <a id="t4"></a>
 
 ## T4 — Method: one CPT rehearsal pass, then SFT
 
 Mirrors the shape of FuguTTX D4, at near 1/1000 of the scale. The CPT pass
-exists to rehearse `make train-cpt`. If the pass does not move the scores, the
-product drops it, and LEARNING records why. Details: [training](training.md).
+exists to rehearse `make train-cpt`. A seeded, paired comparison against the
+noise floor decides whether the pass moves the scores. If the pass does not move
+the scores, the product drops it, and LEARNING records why. Details:
+[training](training.md).
 
 <a id="t5"></a>
 
-## T5 — Teacher: Qwen3-32B under vLLM, on the train instance
+## T5 — Teachers: Qwen3-32B writes the sentences, and two UD parsers label them
 
-The same teacher, served the same way, as FuguTTX specifies. The teacher
-proposes, and a verifier disposes. This mirrors the FuguTTX rule that a teacher
-output enters training only through a filter. Details: [training](training.md).
+Qwen3-32B under vLLM on the train instance stays the FuguTTX teacher, served the
+same way, and it proposes the text. Two independent purpose-built UD parsers
+propose the annotation of each sentence, and the judge admits a record only when
+both agree and the structural checks pass. This mirrors the FuguTTX rule that a
+teacher output enters training only through a filter. A self-agreement check of
+one model measures its consistency, not its correctness, and LEARNING batch 2
+records that measurement. The FuguTTX judge compares a record against its source
+chunk, and two independent annotators are the analog of that grounded check for
+a labeling task. Details: [training](training.md).
 
 <a id="t6"></a>
 
