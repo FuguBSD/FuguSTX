@@ -145,10 +145,10 @@ test. G1 needs the data, and the LEARNING row names the rehearsal.
 - Prediction: H6 holds. H7 holds on the silver dev set, and on ewt and gum by a
   smaller margin, because the domain differs.
 - Seeds: 11, 23, and 37.
-- Stop rule: a probe below the go rule ends the plan before the campaign, and
-  the batch records the parser scores. A stage one slope inside the tolerance
-  ends the plan before stage two. The dispatches stop two hours before a lease
-  expires, and `down` runs.
+- The stop rule: a probe below the go rule ends the plan before the campaign,
+  and the batch records the parser scores. A stage one slope inside the
+  tolerance ends the plan before stage two. The dispatches stop two hours before
+  a lease expires, and `down` runs.
 
 ## Order of work
 

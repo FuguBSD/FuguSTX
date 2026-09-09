@@ -46,13 +46,13 @@ the scores, the product drops it, and LEARNING records why. Details:
 
 Qwen3-32B under vLLM on the train instance stays the FuguTTX teacher, served the
 same way, and it proposes the text. Two independent purpose-built UD parsers
-propose the annotation of each sentence, and the judge admits a record only when
+propose the annotation of each sentence. The judge admits a record only when
 both agree and the structural checks pass. This mirrors the FuguTTX rule that a
 teacher output enters training only through a filter. A self-agreement check of
 one model measures its consistency, not its correctness, and LEARNING batch 2
 records that measurement. The FuguTTX judge compares a record against its source
-chunk, and two independent annotators are the analog of that grounded check for
-a labeling task. Details: [training](training.md).
+chunk. Two independent annotators are the analog of that grounded check for a
+labeling task. Details: [training](training.md).
 
 <a id="t6"></a>
 

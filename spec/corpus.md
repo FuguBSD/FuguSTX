@@ -62,10 +62,11 @@ treebank UD_English-GUMReddit ships masked text, and it is not a source.
   [GUM license file](https://raw.githubusercontent.com/UniversalDependencies/UD_English-GUM/r2.18/LICENSE.txt)
   names the license of each source.
 - **COR-SOURCES-4** — The prose lane must hold these public-domain books from
-  Project Gutenberg: [37134](https://www.gutenberg.org/ebooks/37134), The
-  Elements of Style; [6409](https://www.gutenberg.org/ebooks/6409), How to Speak
-  and Write Correctly; and [45814](https://www.gutenberg.org/ebooks/45814), An
-  Advanced English Grammar.
+  Project Gutenberg. The books are
+  [37134](https://www.gutenberg.org/ebooks/37134), The Elements of Style;
+  [6409](https://www.gutenberg.org/ebooks/6409), How to Speak and Write
+  Correctly; and [45814](https://www.gutenberg.org/ebooks/45814), An Advanced
+  English Grammar.
 - **COR-SOURCES-5** — The pipeline must strip the Project Gutenberg header and
   footer from each book.
 - **COR-SOURCES-6** — The pipeline must exclude a GUM document with no provable

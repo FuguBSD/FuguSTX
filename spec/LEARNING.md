@@ -126,8 +126,8 @@ sft-aug pass trained on them, and the promote gate kept `sft-cpt`.
 
 Outcome by FuguTTX unit:
 
-- **FuguTTX TRN-AUG, FuguTTX D4** — The teacher proposed six batches of 200, and
-  the filter accepted 111 of 1200, a rate of 0.0925 (per batch 0.055 to 0.135).
+- **FuguTTX TRN-AUG, FuguTTX D4** — The teacher proposed six batches of 200. The
+  filter accepted 111 of 1200, a rate of 0.0925 (per batch 0.055 to 0.135).
   Check 1, the agreement of the two seeded annotation passes, rejected 149 to
   160 records per batch. That gate rejects six times more than the other checks
   together. The other rejects per batch: tag 7 to 14, tree 7 to 15, word 4 to
@@ -138,9 +138,9 @@ Outcome by FuguTTX unit:
   the 4310 eval-lane records, verbatim and normalized. Evidence:
   `Library-FuguSTX-teacher-augmentation`.
 - **FuguTTX TRN-AUG, the shared instructions** — The first serve on a fresh
-  instance took near six minutes: a 72 s image pull, then 290 s to the health
-  answer. The health answer alone confirms the FP8 fit. The driver starts the
-  container detached, and no verb fetches a container log, so the CI path
+  instance took near six minutes. It ran a 72 s image pull, then 290 s to the
+  health answer. The health answer alone confirms the FP8 fit. The driver starts
+  the container detached, and no verb fetches a container log, so the CI path
   captures no GPU memory number. The container binds 127.0.0.1:8000 on the
   instance, and the teach client reaches the endpoint over the SSH tunnel. A
   driver log line prints the boot STX_RUN_ID, not the dispatching workflow run.

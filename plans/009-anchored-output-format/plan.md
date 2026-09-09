@@ -124,7 +124,7 @@ records it.
 - Prediction: H4 holds. H5 holds for V2, and the length buckets of plan 006 show
   where.
 - Seeds: 11, 23, and 37. Nine runs.
-- Stop rule: a grammar that llama.cpp rejects on a long sentence ends that
+- The stop rule: a grammar that llama.cpp rejects on a long sentence ends that
   variant, and the batch records the sentence length. The dispatches stop two
   hours before the lease expires, and `down` runs.
 

@@ -77,7 +77,7 @@ The judge filter applies three checks to each proposed record:
 2. The dependency tree validates: one root, fully connected.
 3. Every tag is in the inventory of `share/annotation.gbnf`, the record count
    equals the token count, and the word-table check passes. The word table holds
-   each train-split word with its observed UPOS set: a known word must carry an
+   each train-split word with its observed UPOS set. A known word must carry an
    allowed UPOS, and an unknown word passes. The table is an interim source, not
    the approved dictionary of [the lexicon](engine.md#eng-lexicon).
 
@@ -106,7 +106,7 @@ step needs no instance. Rehearses: FuguTTX TRN-EXEC, FuguTTX IAC-DURA.
 - **TRN-EXEC-4** — Checkpoints must synchronize to Object Storage after each
   epoch.
 - **TRN-EXEC-5** — The promote step must copy the scored GGUF from the
-  checkpoint bucket to the artifacts bucket, and the artifact must match the dev
+  checkpoint bucket to the artifacts bucket. The artifact must match the dev
   scorecard `model_hash`.
 
 <a id="trn-budget"></a>

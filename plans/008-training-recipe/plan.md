@@ -70,10 +70,11 @@ questions remain after it:
 - Prediction: H2 holds by a small margin, and H3 holds.
 - Seeds: 11, 23, and 37, the seeds of plan 007. The control is the plan 007 set
   that the T4 result names, with no new run.
-- Stop rule: an out-of-memory failure gets one configuration change, half the
-  micro batch and double the accumulation steps, committed before the retry
-  (TRN-EXEC-2). A second failure drops the recipe from the campaign. The
-  dispatches stop two hours before the lease expires, and `down` runs.
+- The stop rule: an out-of-memory failure gets one configuration change. That
+  change halves the micro batch and doubles the accumulation steps, and it lands
+  before the retry (TRN-EXEC-2). A second failure drops the recipe from the
+  campaign. The dispatches stop two hours before the lease expires, and `down`
+  runs.
 
 ## Order of work
 
