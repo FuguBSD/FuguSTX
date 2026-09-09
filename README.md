@@ -24,7 +24,3 @@ make train-cpt             # run one continued pretraining pass
 make train-sft             # run one supervised fine-tuning pass
 make scorecards            # print the evaluation scorecards
 ```
-
-## Commit scopes
-
-`spec`, `docs`, `engine`, `corpus`, `train`, `eval`, `infra`, `ci`.
