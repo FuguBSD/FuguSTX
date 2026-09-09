@@ -94,7 +94,7 @@ def read_augmentation(path: Path) -> list[Record]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the FuguSTX SFT pairs.")
-    parser.add_argument("--output", type=Path, default=Path("explore/corpus/pairs.jsonl"))
+    parser.add_argument("--output", type=Path, default=Path("scratch/corpus/pairs.jsonl"))
     parser.add_argument("--augmentation", type=Path, default=None)
     args = parser.parse_args(argv)
 

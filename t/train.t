@@ -247,7 +247,7 @@ subtest 'the teach verb tunnels, filters, and uploads' => sub {
 
 	# A sentence that two batches both propose enters the pairs
 	# once.
-	my $all = "$root/explore/teach/$run-b1/accepted-all.jsonl";
+	my $all = "$root/scratch/teach/$run-b1/accepted-all.jsonl";
 	open my $rebuilt, '<', $all or die "read $all: $!";
 	my @lines = <$rebuilt>;
 	close $rebuilt;

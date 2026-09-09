@@ -245,7 +245,7 @@ sub _uv_run (@argv)
 #	every accepted file of the run.
 sub _teach ( $ip, $run_id, $batch, $count )
 {
-	my $dir = "$ROOT/explore/teach/$run_id-$batch";
+	my $dir = "$ROOT/scratch/teach/$run_id-$batch";
 	make_path("$dir/accepted");
 
 	# The remote side claims the stack and beats the heartbeat, as

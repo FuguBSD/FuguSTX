@@ -88,7 +88,7 @@ def upload(lanes: Lanes, directory: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Upload the FuguSTX corpus lanes.")
-    parser.add_argument("--directory", type=Path, default=Path("explore/upload"))
+    parser.add_argument("--directory", type=Path, default=Path("scratch/upload"))
     parser.add_argument(
         "--local-only",
         action="store_true",

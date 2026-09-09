@@ -18,7 +18,7 @@ from .conllu import Sentence, parse_sentences
 from .lanes import Lanes, Record, build_lanes
 
 #: The default output directory: a local placeholder, not a bucket path.
-DEFAULT_OUTPUT = Path("explore/corpus")
+DEFAULT_OUTPUT = Path("scratch/corpus")
 
 
 def _prose_records(ebook_id: int) -> list[Record]:
