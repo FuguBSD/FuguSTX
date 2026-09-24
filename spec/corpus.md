@@ -80,7 +80,8 @@ labels each segment of the pair, and the labels are the training targets.
   [the finding schema](engine.md#eng-schema). The labeler and the mechanical
   check of [the judge filter](training.md#trn-teach) produce the label.
 - **COR-PAIRS-5** — Each pair must carry its provenance: the source tag, the
-  generator identity and version, the seed, and the prompt hash.
+  generator identity and version, the seed, the prompt hash, and the inventory
+  version.
 - **COR-PAIRS-6** — The human documents must span more than one era and each
   register that the engine checks. The label is then authorship, not era or
   register.

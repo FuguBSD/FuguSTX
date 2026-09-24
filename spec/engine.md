@@ -26,18 +26,30 @@ Rehearses: the FuguTTX harness patterns.
 
 ## The finding schema
 
-The model output has one legal shape: the finding schema. This mirrors the
-FuguTTX rule that tool calls obey the harness schemas at generation time.
+The model output has one legal shape: the finding schema. A registry file
+defines the tell inventory, and the grammar and the alignment label list are
+generated copies of it. This mirrors the FuguTTX rule that tool calls obey the
+harness schemas at generation time.
 
 - **ENG-SCHEMA-1** — A llama.cpp GBNF grammar must constrain the model output to
   the finding schema.
 - **ENG-SCHEMA-2** — The schema must hold one record per segment: the verdict,
-  and a tell category from the inventory of the grammar.
-- **ENG-SCHEMA-3** — Each tell category must map to one repair action, so an
-  agent acts on a finding without a second model call.
-- **ENG-SCHEMA-4** — The grammar file must be the one definition of the tell
-  inventory. The alignment labels of the pair corpus and the findings must use
-  it.
+  and a tell category from the registry.
+- **ENG-SCHEMA-3** — Each category must map to one repair action of a closed
+  set: keep, compress, delete, rewrite, or verify. An agent then acts on a
+  finding without a second model call.
+- **ENG-SCHEMA-4** — A registry file must be the one definition of the tell
+  inventory. The grammar and the alignment label list must be generated copies
+  of it. A test must compare each generated copy byte for byte with the
+  registry.
+- **ENG-SCHEMA-5** — Each registry row must hold the id, the level, the repair
+  action, the version since, the version retired, the description, and the
+  evidence. The level is lexical, syntactic, structural, or content.
+- **ENG-SCHEMA-6** — The inventory must carry a version. A retired category must
+  stay in the registry and leave the grammar, and an id must not return.
+- **ENG-SCHEMA-7** — `none` must be the only reserved id, and the inventory must
+  hold no catch-all category. Each other id names one tell with one repair
+  action.
 
 <a id="eng-determ"></a>
 

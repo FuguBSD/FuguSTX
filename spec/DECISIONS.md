@@ -136,7 +136,10 @@ written from a structure skeleton plus the source code rebuilds a memorized
 page, cat.1 at 0.93. Surface lexical markers do not separate a human page from
 its mirror; the differences are completeness, rationale sentences, and invented
 facts. The regex `ste-lint` of the org pack stays the style gate of every
-FuguBSD repository, and FuguSTX builds no style checker. Details:
+FuguBSD repository, and FuguSTX builds no style checker. The tell inventory is a
+versioned registry, and the grammar is a generated copy. Lexical tells decay
+within a model generation, and the syntactic and content tells persist. The
+inventory must extend and retire without a schema change. Details:
 [corpus](corpus.md), [engine](engine.md).
 
 <a id="t13"></a>
