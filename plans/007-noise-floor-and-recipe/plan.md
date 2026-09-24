@@ -18,16 +18,18 @@ the tier T1 review. The roadmap holds this work as phase P7, with plan 006.
 
 ## Status
 
-Step 1 lands now: a configuration change with no training run. It moves every
-configuration to the recipe of decision T3 before phase P12. The first SFT
-campaign on the pair corpus then runs that recipe. Plan 006 edits the same
-files: its package 1 adds the `seed` key, and its package 3 adds the eval set.
-Step 1 changes the precision, the adapter, and the attention backend, so the two
-plans make independent edits of the same files. `train/sft-aug.yml` leaves
-`train/` under package 1 of plan 006, and this plan does not change it. Every
-other step waits on phase P11, the pair corpus, and on phase P12, the first SFT
-campaign on it. The campaign also waits on the instruments of plan 006: the seed
-input, the eval loss, the scorecard counts, and the paired bootstrap.
+Step 1 lands after package 1 of plan 006: a configuration change with no
+training run. It moves every configuration to the recipe of decision T3 before
+phase P12. The first SFT campaign on the pair corpus then runs that recipe. Plan
+006 edits the same files: its package 1 adds the `seed` key, and its package 3
+adds the eval set. Step 1 changes the precision, the adapter, and the attention
+backend. It also appends the rule that binds every configuration to decision T3.
+`train/sft-aug.yml` loads the base in 4-bit, and it leaves `train/` under
+package 1 of plan 006. Step 1 therefore waits on that package, and this plan
+does not change the file. Every other step waits on phase P11, the pair corpus,
+and on phase P12, the first SFT campaign on it. The campaign also waits on the
+instruments of plan 006: the seed input, the eval loss, the scorecard counts,
+and the paired bootstrap.
 
 No decision blocks the campaign. Decision T3 sets bf16 for a model that fits the
 GPU with its optimizer states, and every configuration of this plan follows it.
@@ -122,12 +124,12 @@ before the first dispatch.
 - Seeds: 11, 23, and 37, one for each arm.
 - The comparison point: the zero-training baseline scorecard of phase P11
   (EVL-TIERS-9), through the paired bootstrap of plan 006.
-- The decision rule for TRN-CPT-2: the pass stays only when two conditions hold.
-  Every one of the three paired differences on the dev split improves balanced
-  accuracy and category agreement. None of the three raises the false-positive
-  rate of the tier T1 sweep on the eval split. The mean difference exceeds two
-  standard deviations of the base seeds on both. In every other case the product
-  drops the pass.
+- The decision rule for TRN-CPT-2: the pass stays only when three conditions
+  hold. Every one of the three paired differences on the dev split improves
+  balanced accuracy and category agreement. None of the three raises the
+  false-positive rate of the tier T1 sweep on the eval split. The mean
+  difference exceeds two standard deviations of the base seeds on both. In every
+  other case the product drops the pass.
 - The recipe rule: the full fine-tune wins when its paired interval against the
   adapter seeds lies above zero on balanced accuracy. The eval loss picks the
   epoch count, and the dev balanced accuracy picks the learning rate.
@@ -141,16 +143,17 @@ before the first dispatch.
 
 ## Order of work
 
-1. Move the configurations to the T3 recipe with flash attention. Lands now. The
-   settings are `load_in_4bit: false`, `adapter: lora`, `lora_r: 64`,
-   `lora_alpha: 128`, and `flash_attention: true`. `cpt.yml` keeps its
-   completion dataset, and it takes no eval set. Sample packing stays. Add
-   `train/sft-full.yml` as a copy of `train/sft-base.yml`. It takes no adapter,
-   learning rate 0.00002, warmup 3 percent, and a cosine schedule. Replace the
-   SFT row of the compute budget table with the T3 recipe. Add a row for the
-   full fine-tune. Append two rules to TRN-EXEC. A configuration must name its
-   attention backend, and sample packing must run on a packing-capable backend.
-   The precision and the adapter of a configuration must follow decision T3.
+1. Move the configurations to the T3 recipe with flash attention. Lands after
+   package 1 of plan 006. The settings are `load_in_4bit: false`,
+   `adapter: lora`, `lora_r: 64`, `lora_alpha: 128`, and
+   `flash_attention: true`. `cpt.yml` keeps its completion dataset, and it takes
+   no eval set. Sample packing stays. Add `train/sft-full.yml` as a copy of
+   `train/sft-base.yml`. It takes no adapter, learning rate 0.00002, warmup 3
+   percent, and a cosine schedule. Replace the SFT row of the compute budget
+   table with the T3 recipe. Add a row for the full fine-tune. Append two rules
+   to TRN-EXEC. A configuration must name its attention backend, and sample
+   packing must run on a packing-capable backend. The precision and the adapter
+   of a configuration must follow decision T3.
 2. Teach the driver a run with no adapter. `cmd_merge` reads the `adapter` key
    of the configuration, and it copies the output as the merged model when the
    key is absent. The `gguf` verb of `scripts/train` then converts the merged

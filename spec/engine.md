@@ -17,7 +17,7 @@ Rehearses: the FuguTTX harness patterns.
 - **ENG-SPLIT-1** — The harness must segment the text into sentences
   deterministically, in Perl.
 - **ENG-SPLIT-2** — The harness must compute every byte offset from its own
-  tokenizer.
+  segmenter.
 - **ENG-SPLIT-3** — The model must not produce an offset.
 - **ENG-SPLIT-4** — The harness must be the only writer of offsets and the only
   caller of llama.cpp.
@@ -40,8 +40,8 @@ harness schemas at generation time.
   finding without a second model call.
 - **ENG-SCHEMA-4** — A registry file must be the one definition of the tell
   inventory. The grammar and the alignment label list must be generated copies
-  of it. A test must compare each generated copy byte for byte with the
-  registry.
+  of it. A test must compare each committed generated copy byte for byte with a
+  fresh generation from the registry.
 - **ENG-SCHEMA-5** — Each registry row must hold the id, the level, the repair
   action, the version since, the version retired, the description, and the
   evidence. The level is lexical, syntactic, structural, or content.
@@ -59,7 +59,7 @@ The engine is deterministic. The guarantee holds under the pins of
 [T2](DECISIONS.md#t2).
 
 - **ENG-DETERM-1** — Every output record must carry the byte offsets from the
-  harness tokenizer and the model hash.
+  harness segmenter and the model hash.
 - **ENG-DETERM-2** — Same bytes in must give the same findings out, for one
   model hash and one engine version.
 

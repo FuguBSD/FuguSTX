@@ -64,11 +64,11 @@ Rehearses: FuguTTX TRN-AUG.
 
 The served checkpoint is `Qwen/Qwen3-32B-FP8`, the official FP8 release. The
 BF16 weights hold near 65 GB, and the KV cache gets thin headroom on 80 GB.
-Every client request turns the Qwen3 thinking mode off, because the judge
-compares raw completions. The generation call samples at temperature 0.9, with a
-seed from the run and the batch. A re-run of one batch therefore repeats its
-mirrors. A generator prompt must hold no sentence of any human document of the
-corpus.
+Every client request turns the Qwen3 thinking mode off. The mirror must hold
+prose only, and any thinking trace in the mirror enters the containment check.
+The generation call samples at temperature 0.9, with a seed from the run and the
+batch. A re-run of one batch therefore repeats its mirrors. A generator prompt
+must hold no sentence of any human document of the corpus.
 
 The judge filter applies four checks to each proposed pair:
 

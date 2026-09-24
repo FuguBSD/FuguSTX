@@ -25,9 +25,9 @@ decision blocks them, and no GPU run is part of them. Packages 3 to 7 wait on
 phase P11, the pair corpus. Each one reads the dev split, the labels, or the
 zero-training baseline scorecard of that phase. The campaign of plan 007 waits
 on this plan and on phase P12. It compares seeded runs through the scorecard
-that this plan defines. Step 1 of plan 007 also lands now, and its edit of the
-same `train/*.yml` files is independent of package 1. The roadmap holds this
-plan as a part of phase P7.
+that this plan defines. Step 1 of plan 007 lands after package 1. Its T3 rule
+binds every configuration, and package 1 removes `train/sft-aug.yml`, which
+loads the base in 4-bit. The roadmap holds this plan as a part of phase P7.
 
 EVL-TIERS stays partial. The tier T2 suite (EVL-TIERS-4) waits for phase P5.
 EVL-TIERS-5 and EVL-TIERS-10 wait on the baseline run, in phases P11 and P12.

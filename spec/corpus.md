@@ -53,8 +53,6 @@ sources at the time of publication. Confirm each source before a campaign.
   files that it describes, from the tree at the pinned tag.
 - **COR-SOURCES-3** — The pipeline must exclude each document whose license
   header is not permissive, per [LIC-RELEASE-4](licensing.md#lic-release).
-- **COR-SOURCES-4** — The prose lane must hold the human side of the train split
-  only.
 - **COR-SOURCES-5** — The pipeline must strip the version-control id lines and
   the license comment block from each document. They leak the era and the
   source.
