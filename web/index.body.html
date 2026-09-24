@@ -9,7 +9,8 @@ from the findings.</p>
 <p>The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU
 only. The <code>stx</code> harness — Perl 5 over
 <a href="https://lib.fugubsd.org/">Fugu</a> — computes every byte
-offset, and the model labels the tokens.</p>
+offset, and the model judges each sentence. The model learns from
+pairs of a human document and a machine mirror of the same facts.</p>
 
 <p>The project is the pilot of
 <a href="https://ttx.fugubsd.org/">FuguTTX</a>. The build rehearses
