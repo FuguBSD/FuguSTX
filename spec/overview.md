@@ -2,10 +2,10 @@
 
 ## Product
 
-**G1 — the product.** FuguSTX turns raw English text into offset-faithful
-linguistic annotations. The annotations are tokens, sentences, universal POS
-tags, lemmas, morphological features, and dependency relations. A linter
-consumes the annotations and stays a rulebook.
+**G1 — the product.** FuguSTX finds the tells of machine-written prose in
+English technical text. The engine reads a document, and it reports one finding
+per segment: the byte offsets, a verdict, and a tell category. A tool or an
+agent consumes the findings and repairs the text.
 
 ## The pilot
 
@@ -24,22 +24,22 @@ choice.
 
 ## Deliverables
 
-The deliverables are the model, the `stx` engine, the `stx-ste` reference
-client, and [the learning](LEARNING.md).
+The deliverables are the model, the `stx` engine, and
+[the learning](LEARNING.md).
 
 ## Accepted costs
 
 The design trades a small deployment for pilot value. The table names each
 accepted cost.
 
-| Accepted cost                                   | Reason                                               |
-| ----------------------------------------------- | ---------------------------------------------------- |
-| The model file is near 0.6 GB                   | The engine is a Qwen3-0.6B fine-tune in GGUF form    |
-| Cold start takes seconds                        | llama.cpp loads a quantized model at start           |
-| Inference is slower than a purpose-built tagger | The runtime mirrors FuguTTX D2                       |
-| Training needs a cloud GPU                      | The training pipeline mirrors FuguTTX D3, on purpose |
+| Accepted cost                                       | Reason                                               |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| The model file is near 0.6 GB                       | The engine is a Qwen3-0.6B fine-tune in GGUF form    |
+| Cold start takes seconds                            | llama.cpp loads a quantized model at start           |
+| Inference is slower than a purpose-built classifier | The runtime mirrors FuguTTX D2                       |
+| Training needs a cloud GPU                          | The training pipeline mirrors FuguTTX D3, on purpose |
 
-Two guarantees survive the trade: the annotation contract, and the byte-offset
+Two guarantees survive the trade: the finding contract, and the byte-offset
 guarantee. [T10](DECISIONS.md#t10) keeps the door open for a small purpose-built
 engine behind the same interface.
 
@@ -50,8 +50,9 @@ STX carries three true meanings, and each one fits the project.
 - **Saxitoxin.** STX is the other pufferfish toxin. Saxitoxin and tetrodotoxin
   block the same sodium channel. FuguSTX is the smaller relative of FuguTTX,
   with the same mechanism.
-- **Syntax.** The letters S, T, and X are the skeleton of the word "syntax".
-  Syntax is the product.
+- **Syntax.** The letters S, T, and X are the skeleton of the word "syntax". The
+  engine reads each sentence, and a tell hides in the syntax as much as in the
+  content.
 - **Start of text.** STX is ASCII 0x02, the start-of-text control character. The
   pilot comes before the main text.
 

@@ -43,53 +43,79 @@ TRN-CPT.
 ## The SFT pass
 
 The SFT pass follows the CPT rehearsal (decision T4). The
-[annotation schema](engine.md#eng-schema) defines the output grammar. Rehearses:
+[finding schema](engine.md#eng-schema) defines the output grammar. Rehearses:
 FuguTTX TRN-SFT.
 
-- **TRN-SFT-1** — The SFT pass must train on treebank-derived pairs, plus
-  [accepted augmentation](corpus.md#cor-aug).
-- **TRN-SFT-2** — The format must be a token list in, and grammar-constrained
-  labels out.
-- **TRN-SFT-3** — The treebank pairs must come from the train splits. The dev
-  split is a score input, and it must not enter a pair.
+- **TRN-SFT-1** — The SFT pass must train on the admitted pairs of
+  [the training lane](corpus.md#cor-lanes).
+- **TRN-SFT-2** — The format must be segments in, and grammar-constrained
+  findings out.
+- **TRN-SFT-3** — The pairs must come from the train splits. The dev split is a
+  score input, and it must not enter a pair.
 
 <a id="trn-teach"></a>
 
-## The teacher campaign and the judge filter
+## The generator campaign and the judge filter
 
-The teacher proposes, and a verifier disposes ([T5](DECISIONS.md#t5)). The SSH
+The generator proposes, and the judge disposes ([T5](DECISIONS.md#t5)). The SSH
 tunnel is the FuguTTX transport, rehearsed exactly. FuguTTX stakes its data
 quality on the same filter pattern, so the filter results are LEARNING entries.
 Rehearses: FuguTTX TRN-AUG.
 
 The served checkpoint is `Qwen/Qwen3-32B-FP8`, the official FP8 release. The
 BF16 weights hold near 65 GB, and the KV cache gets thin headroom on 80 GB.
-Every client request turns the Qwen3 thinking mode off, because the judge
-compares raw completions. The generation call samples at temperature 0.9, with a
-seed from the run and the batch. A re-run of one batch therefore repeats its
-sentences. The two annotation passes sample at temperature 0.2, with one fixed
-seed for each pass, and the distinct seeds keep the passes independent. A
-few-shot example in a teacher prompt must come from the train splits only.
+Every client request turns the Qwen3 thinking mode off. The mirror must hold
+prose only, and any thinking trace in the mirror enters the containment check.
+The generation call samples at temperature 0.9, with a seed from the run and the
+batch. A re-run of one batch therefore repeats its mirrors. A generator prompt
+must hold no sentence of any human document of the corpus.
 
-The judge filter applies three checks to each proposed record:
+The judge filter applies four checks to each proposed pair:
 
-1. Two independent teacher passes agree on the annotation.
-2. The dependency tree validates: one root, fully connected.
-3. Every tag is in the inventory of `share/annotation.gbnf`, the record count
-   equals the token count, and the word-table check passes. The word table holds
-   each train-split word with its observed UPOS set. A known word must carry an
-   allowed UPOS, and an unknown word passes. The table is an interim source, not
-   the approved dictionary of [the lexicon](engine.md#eng-lexicon).
+1. The generator has not memorized the human document. A recall probe of the
+   generator, or the n-gram containment of a source-only draft against the
+   document, stays under the threshold.
+2. The mirror holds no sentence of the original: the n-gram containment of the
+   mirror against the document stays under the threshold.
+3. The mirror follows the structure of the document: the section skeleton
+   matches, the segment count stays within the bound, and the document renders.
+4. The alignment labels pass. A labeler of a different model family than the
+   generator proposes each label, and two seeded passes agree. The mechanical
+   check of each category passes.
 
-- **TRN-TEACH-1** — vLLM must serve Qwen3-32B on the train instance.
+The labeler sees the segmented original and the segmented mirror, both numbered.
+It returns the counterpart index of each mirror segment, or none, and a label
+from the tell inventory of [the finding schema](engine.md#eng-schema). Qwen3-32B
+labels the mirrors of the second generator, and a model of the family of the
+second generator labels the Qwen3-32B mirrors.
+
+The experiment card of the first corpus campaign fixes each threshold and each
+bound, and this document holds no guess (TRN-TEACH-10).
+
+- **TRN-TEACH-1** — vLLM must serve the Qwen3-32B generator on the train
+  instance.
 - **TRN-TEACH-2** — The endpoint must bind to localhost.
 - **TRN-TEACH-3** — The generation client must reach the endpoint over an SSH
   tunnel.
-- **TRN-TEACH-4** — The judge filter must accept a record only when the three
-  checks pass.
-- **TRN-TEACH-5** — The filter must log each rejected record with its reason.
+- **TRN-TEACH-4** — The judge filter must admit a pair only when the four checks
+  pass.
+- **TRN-TEACH-5** — The filter must log each rejected pair with its reason.
 - **TRN-TEACH-6** — LEARNING must record the filter design and the rejection
   rates.
+- **TRN-TEACH-7** — A generator of a second model family must write a share of
+  the mirrors through a headless client session under a dedicated profile. The
+  profile must carry no rule file, no memory, and no tool except the output
+  write.
+- **TRN-TEACH-8** — A labeler of a different model family than the generator of
+  the pair must propose each alignment label. It must run two passes with
+  distinct seeds.
+- **TRN-TEACH-9** — The judge must drop the target of a segment whose two passes
+  disagree. It must reject a pair whose share of dropped segments exceeds the
+  bound.
+- **TRN-TEACH-10** — The experiment card of the first corpus campaign must state
+  each threshold and each bound of the judge before the first admission. This
+  document must hold each value after that campaign. A value in this document
+  before that campaign is a guess, and the specification must not hold a guess.
 
 <a id="trn-exec"></a>
 
@@ -117,12 +143,12 @@ The estimates are order-of-magnitude, at the H100 price of EUR 2.87 per hour,
 read 2026-08-28. Scaleway documents a minimum of 60 minutes per created
 resource.
 
-| Item                               | GPU-hours | EUR per run |
-| ---------------------------------- | --------- | ----------- |
-| SFT pass (0.6B, QLoRA)             | 1–2       | 3–6         |
-| CPT rehearsal pass                 | 1–2       | 3–6         |
-| Teacher campaign (Qwen3-32B, vLLM) | 5–15      | 14–43       |
-| Artifact suite sweep (dev host)    | —         | 1–3         |
+| Item                                 | GPU-hours | EUR per run |
+| ------------------------------------ | --------- | ----------- |
+| SFT pass (0.6B, QLoRA)               | 1–2       | 3–6         |
+| CPT rehearsal pass                   | 1–2       | 3–6         |
+| Generator campaign (Qwen3-32B, vLLM) | 5–15      | 14–43       |
+| Artifact suite sweep (dev host)      | —         | 1–3         |
 
 The last row prices [the artifact suite](evaluation.md#evl-suite) sweep on
 [the dev host](infrastructure.md#iac-devhost). An active month costs
@@ -133,3 +159,6 @@ the flagship price.
 
 - **TRN-BUDGET-1** — A cost estimate must not assume a run cheaper than one
   hour.
+- **TRN-BUDGET-2** — A generator that runs outside the train instance must
+  record its call count and its token count per campaign. A campaign must state
+  its call budget before the first call.

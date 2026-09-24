@@ -1,10 +1,10 @@
 # FuguSTX specification
 
-FuguSTX is an embeddable English linguistic analysis engine for prose linters,
-built as the pilot of FuguTTX. The engine turns raw English text into
-offset-faithful linguistic annotations. The build rehearses the FuguTTX
-production pipeline at small scale, on the same components, at real prices.
-Cheap learnings are a deliverable, and [the learning](LEARNING.md) records them.
+FuguSTX finds the tells of machine-written prose in English technical text,
+built as the pilot of FuguTTX. The engine reads a document and reports one
+offset-faithful finding per segment. The build rehearses the FuguTTX production
+pipeline at small scale, on the same components, at real prices. Cheap learnings
+are a deliverable, and [the learning](LEARNING.md) records them.
 
 This document is the entry point of the specification. It holds the plan
 contract, the ID conventions, and the document tables.
@@ -21,7 +21,7 @@ contract, the ID conventions, and the document tables.
 - A plan can exclude a rule from a cited unit with `without`, for example
   `Implements: ENG-SCHEMA without ENG-SCHEMA-1`.
 - A plan must cite each unit that it touches but defers, for example
-  `Defers: ENG-LEXICON`.
+  `Defers: ENG-IFACE`.
 - The change that implements a unit, or a part of one, must set the unit state
   in [STATUS.md](STATUS.md) in the same change.
 
@@ -35,7 +35,7 @@ unit, and the unit ID is the anchor in upper case:
 ```markdown
 <a id="eng-schema"></a>
 
-## The annotation schema
+## The finding schema
 
 - **ENG-SCHEMA-1** — A llama.cpp GBNF grammar must …
 ```
@@ -68,16 +68,16 @@ unit, and the unit ID is the anchor in upper case:
 Each document specifies one area of work. The code of a document prefixes the
 IDs of its units.
 
-| Code | Document                               | Area                                                           |
-| ---- | -------------------------------------- | -------------------------------------------------------------- |
-| ENG  | [engine.md](engine.md)                 | The analysis engine, its interfaces, and the reference client  |
-| COR  | [corpus.md](corpus.md)                 | Data sources, license lanes, and the corpus buckets            |
-| TRN  | [training.md](training.md)             | Training passes, the teacher campaign, and the compute budget  |
-| EVL  | [evaluation.md](evaluation.md)         | The evaluation tiers and the artifact suite                    |
-| IAC  | [infrastructure.md](infrastructure.md) | The applied shared infrastructure, the dev host, and the image |
-| LRN  | [LEARNING.md](LEARNING.md)             | The learning of each campaign, and the scope of its claims     |
-| LIC  | [licensing.md](licensing.md)           | Licenses, attribution, and release integrity                   |
-| RSK  | [risks.md](risks.md)                   | Risks and their mitigations                                    |
+| Code | Document                               | Area                                                            |
+| ---- | -------------------------------------- | --------------------------------------------------------------- |
+| ENG  | [engine.md](engine.md)                 | The engine and its interfaces                                   |
+| COR  | [corpus.md](corpus.md)                 | The sources, the pair corpus, the lanes, and the buckets        |
+| TRN  | [training.md](training.md)             | Training passes, the generator campaign, and the compute budget |
+| EVL  | [evaluation.md](evaluation.md)         | The evaluation tiers and the artifact suite                     |
+| IAC  | [infrastructure.md](infrastructure.md) | The applied shared infrastructure, the dev host, and the image  |
+| LRN  | [LEARNING.md](LEARNING.md)             | The learning of each campaign, and the scope of its claims      |
+| LIC  | [licensing.md](licensing.md)           | Licenses, attribution, and release integrity                    |
+| RSK  | [risks.md](risks.md)                   | Risks and their mitigations                                     |
 
 ## Governance documents
 
