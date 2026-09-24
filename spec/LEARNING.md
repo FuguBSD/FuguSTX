@@ -68,6 +68,7 @@ row only points. "The shared instructions" names the synced
 | Guest image build with fuguvm and autoinstall  | FuguTTX IAC-IMAGE                                   | `Library-FuguSTX-guest-image`          |
 | llama.cpp at a pinned build, CPU inference     | FuguTTX D2, and the FuguTTX inference specification | `Library-FuguSTX-llamacpp`             |
 | llama.cpp on OpenBSD, determinism              | FuguTTX D2, and the FuguTTX inference specification | `Library-FuguSTX-openbsd-inference`    |
+| Generator memorization and the mirror method   | FuguTTX TRN-AUG, FuguTTX D4                         | `Library-FuguSTX-mirror-probe`         |
 
 <a id="lrn-entries"></a>
 
@@ -159,6 +160,24 @@ Outcome by FuguTTX unit:
   `Library-FuguSTX-price`, `Library-FuguSTX-budget`, `Library-FuguSTX-watchdog`.
 
 Not rehearsed: FuguTTX IAC-IMAGE, and llama.cpp on OpenBSD.
+
+Delivery: LRN-DELIVER-2 and LRN-DELIVER-3 stay open for this batch.
+
+### Batch 3 — the mirror probe of 2026-09-24, in a session
+
+A session probe measured the generator against the OpenBSD 3.0 manual pages,
+with no cloud campaign and no instance. It asked whether the generator has
+memorized a page, and whether a mirror escapes the memorized text.
+
+Outcome by FuguTTX unit:
+
+- **FuguTTX TRN-AUG, FuguTTX D4** — A famous page sits in the training set of
+  the generator, and only an early-deleted page escapes. A mirror from a
+  skeleton plus the source rebuilds a memorized page, so a memorization check
+  must precede pairing. Surface markers do not separate a human page from its
+  mirror. Evidence: `Library-FuguSTX-mirror-probe`.
+
+Not rehearsed: every infrastructure and training component.
 
 Delivery: LRN-DELIVER-2 and LRN-DELIVER-3 stay open for this batch.
 

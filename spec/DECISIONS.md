@@ -128,19 +128,17 @@ the same facts. A generator writes the mirror without sight of the human prose.
 A grammar analyzer with a rulebook loses on three counts. It sees only what the
 grammar exposes, and the measured tells are content-shaped. Every grammar rule
 also fires on human text, so its precision as a detector is poor. A rulebook
-chases each model generation by hand, and a pair corpus regenerates. The
-measured basis is a probe of 2026-09-24 with Claude Opus on OpenBSD 3.0 manual
-pages. A famous page sits in the training set of the generator: strlcpy.3
-returns at recall ratio 0.99, and photurisd.8, deleted early, at 0.12. A mirror
-written from a structure skeleton plus the source code rebuilds a memorized
-page, cat.1 at 0.93. Surface lexical markers do not separate a human page from
-its mirror; the differences are completeness, rationale sentences, and invented
-facts. The regex `ste-lint` of the org pack stays the style gate of every
-FuguBSD repository, and FuguSTX builds no style checker. The tell inventory is a
-versioned registry, and the grammar is a generated copy. Lexical tells decay
-within a model generation, and the syntactic and content tells persist. The
-inventory must extend and retire without a schema change. Details:
-[corpus](corpus.md), [engine](engine.md).
+chases each model generation by hand, and a pair corpus regenerates. A famous
+page sits in the training set of the generator, and a mirror from a skeleton
+plus the source rebuilds the memorized page. Surface lexical markers do not
+separate a human page from its mirror; the differences are completeness,
+rationale sentences, and invented facts. LEARNING records the probe. The regex
+`ste-lint` of the org pack stays the style gate of every FuguBSD repository, and
+FuguSTX builds no style checker. The tell inventory is a versioned registry, and
+the grammar is a generated copy. Lexical tells decay within a model generation,
+and the syntactic and content tells persist. The inventory must extend and
+retire without a schema change. Details: [corpus](corpus.md),
+[engine](engine.md).
 
 <a id="t13"></a>
 

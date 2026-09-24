@@ -117,10 +117,11 @@ before the first dispatch.
 - The comparison point: the zero-training baseline scorecard of phase P11
   (EVL-TIERS-9), through the paired bootstrap of plan 006.
 - The decision rule for TRN-CPT-2: the pass stays only when two conditions hold.
-  Every one of the three paired differences improves balanced accuracy and
-  category agreement, and none raises the false-positive rate. The mean
-  difference exceeds two standard deviations of the base seeds on both. In every
-  other case the product drops the pass.
+  Every one of the three paired differences on the dev split improves balanced
+  accuracy and category agreement. None of the three raises the false-positive
+  rate of the tier T1 sweep on the eval split. The mean difference exceeds two
+  standard deviations of the base seeds on both. In every other case the product
+  drops the pass.
 - The recipe rule: the full fine-tune wins when its paired interval against the
   adapter seeds lies above zero on balanced accuracy. The eval loss picks the
   epoch count, and the dev balanced accuracy picks the learning rate.

@@ -20,12 +20,12 @@ plan.
 ## Status
 
 Packages 1 and 2 land now: the run dispatch by name with a seed, and the
-experiment card. No decision blocks them, and no GPU run is part of them.
-Packages 3 to 7 wait on phase P11, the pair corpus. Each one reads the dev
-split, the labels, or the zero-training baseline scorecard of that phase. Plan
-007 waits on this plan and on phase P12. It compares seeded runs through the
-scorecard that this plan defines. The roadmap holds this plan as a part of phase
-P7.
+experiment card. Each one lands with its tests and its register note. No
+decision blocks them, and no GPU run is part of them. Packages 3 to 7 wait on
+phase P11, the pair corpus. Each one reads the dev split, the labels, or the
+zero-training baseline scorecard of that phase. Plan 007 waits on this plan and
+on phase P12. It compares seeded runs through the scorecard that this plan
+defines. The roadmap holds this plan as a part of phase P7.
 
 EVL-TIERS stays partial. The tier T2 suite (EVL-TIERS-4) waits for phase P5.
 EVL-TIERS-5 and EVL-TIERS-10 wait on the baseline run, in phases P11 and P12.
@@ -106,13 +106,21 @@ as it admits one.
    no seed, and they keep their fixed paths. A stack runs one CPT pass, and
    `sft-cpt.yml` reads `/scratch/outputs/cpt-merged`. Append a rule to TRN-EXEC.
    A run must record its seed in the run log and in each scorecard.
+   `t/train-driver.t` covers the seed override and the output suffix.
+   `t/train.t` covers the `sft` verb, the seed input, the label, and the
+   free-text name check. A new `t/workflows.t` covers the environment rule of
+   both workflows, because the `t/ci` files are synced copies of the org pack.
+   Name the `sft` action and the `seed` input in the stage map of
+   `train/RUNBOOK.md`. Set the TRN-EXEC note of
+   [the register](../../spec/STATUS.md): it names the seed.
 2. Add the experiment card. Lands now. Append a rule to LRN-DELIVER. A campaign
    must open with one card as its first observation in the library, before the
    first dispatch (decision T11). The card must name the hypothesis, and the
    predicted direction and size of the effect. It must name the smallest effect
    that the sweep can detect, the seeds, and the stop rule. It must name the
    comparison point: the zero-training baseline scorecard (EVL-TIERS-9). The
-   card is an observation of the library, and the closing batch cites it.
+   card is an observation of the library, and the closing batch cites it. Set
+   the LRN-DELIVER note of the register: it names the card.
 3. Add an eval loss. Waits on phase P11. `pairs.py` writes the SFT examples of
    the dev split to `pairs-dev.jsonl`, beside `pairs.jsonl`. `upload.py` puts it
    in `stx-corpus`. Each SFT configuration names it under `test_datasets`, with
@@ -126,20 +134,20 @@ as it admits one.
    category match on each segment that both sides mark machine-written. The
    script also counts each match per tell category. It keeps each count in four
    length buckets: 1 to 10 tokens, 11 to 20, 21 to 40, and 41 and more.
-   `scores()` derives the three metrics of EVL-TIERS-2 from the counts: balanced
-   accuracy, the false-positive rate on the human set, and category agreement.
-   `score.py` and `t0.py` derive the same counts, so the tier T0 script and the
-   sweep agree. `cards.py` prints the per-category columns and the buckets
-   behind a `--fields` flag, so the default table keeps its width. Keep the
-   failure reason. `bin/stx` adds a `kind` field to each error reply, with a
-   schema-shaped kind: `count`, `category`, `cutoff`, or `empty`. The server
-   transport reads the stop reason of the reply for `cutoff`. The exec transport
-   marks an output at the token cap with too few records as `cutoff`. The sweep
-   counts failures by kind, and it writes each malformed record with its reply
-   to a failure file beside the scorecard. Append a rule to EVL-TIERS. A
-   scorecard must hold the per-category counts and a breakdown by segment
-   length. Append a second rule. A sweep must record each malformed record with
-   the reason.
+   `scores()` derives each metric from the counts. The dev split gives balanced
+   accuracy and category agreement (EVL-TIERS-2), and the eval lane adds the
+   false-positive rate on its human set (EVL-TIERS-3). `score.py` and `t0.py`
+   derive the same counts, so the tier T0 script and the sweep agree. `cards.py`
+   prints the per-category columns and the buckets behind a `--fields` flag, so
+   the default table keeps its width. Keep the failure reason. `bin/stx` adds a
+   `kind` field to each error reply, with a schema-shaped kind: `count`,
+   `category`, `cutoff`, or `empty`. The server transport reads the stop reason
+   of the reply for `cutoff`. The exec transport marks an output at the token
+   cap with too few records as `cutoff`. The sweep counts failures by kind, and
+   it writes each malformed record with its reply to a failure file beside the
+   scorecard. Append a rule to EVL-TIERS. A scorecard must hold the per-category
+   counts and a breakdown by segment length. Append a second rule. A sweep must
+   record each malformed record with the reason.
 5. Write per-segment results and the paired bootstrap. Waits on phase P11. The
    sweep writes a per-segment file: one row per segment, with the token count,
    the label, the verdict, and the category. The per-segment file and the
@@ -175,30 +183,26 @@ as it admits one.
    `scorecard-cpu-dev-<label>.json`, so it never overwrites the eval aggregate
    of the same run and label. A dev sweep on the CPU shards costs no GPU minute.
 7. Add the tests, set the register, and verify. Waits on phase P11. `test_t1.py`
-   covers the confusion counts, the per-category counts, the kinds, the buckets,
-   and the per-segment file. It also covers the worker split, the count merge,
-   and the bootstrap on a fixture pair. `test_score.py` and `test_t0.py` cover
-   the three metrics from the counts. `test_cards.py` covers the columns, the
-   `delta` block, and the `compare` command. `test_pairs.py` covers the dev
-   examples file. `t/stx.t` covers the `kind` field. `t/train-driver.t` covers
-   the seed override, the output suffix, and the eight-slot serve. `t/train.t`
-   covers the `sft` verb, the seed input, the label, and the free-text name
-   check. A new `t/workflows.t` covers the environment rule of both workflows,
-   because the `t/ci` files are synced copies of the org pack. Set the register.
-   The EVL-TIERS note names the counts, the new files, and the dev sweep. The
-   TRN-EXEC note names the seed, and the LRN-DELIVER note names the card. Name
-   the `sft` action and the `seed`, `split`, and `label` inputs in the stage map
-   of `train/RUNBOOK.md`. Update the promote and threshold answers of the
-   runbook to the baseline comparison of EVL-TIERS-9. Verify against a
-   pair-corpus scorecard. Re-run the zero-training baseline scorer of phase P11
-   through the widened score script, under its own label. Its counts must equal
-   the counts of the baseline scorecard, and its metrics must equal the baseline
-   metrics. The run also gives the baseline its per-segment file. Then run the
-   aggregate of a later scorecard against that label, or the baseline against
-   itself when no later scorecard exists. A self-pairing must show a zero mean
-   difference and an interval of zero width. The dev card must show the
-   per-category counts, the length buckets, and the failure kinds. That card is
-   the first diagnostic deliverable of the capability track.
+   covers the confusion counts, the false-positive rate, the per-category
+   counts, the kinds, the buckets, and the per-segment file. It also covers the
+   worker split, the count merge, and the bootstrap on a fixture pair.
+   `test_score.py` and `test_t0.py` cover the two dev metrics from the counts.
+   `test_cards.py` covers the columns, the `delta` block, and the `compare`
+   command. `test_pairs.py` covers the dev examples file. `t/stx.t` covers the
+   `kind` field. `t/train-driver.t` covers the eight-slot serve. Set the
+   EVL-TIERS note of the register: it names the counts, the new files, and the
+   dev sweep. Name the `split` and `label` inputs in the stage map of
+   `train/RUNBOOK.md`. Update the promote and threshold answers of the runbook
+   to the baseline comparison of EVL-TIERS-9. Verify against a pair-corpus
+   scorecard. Re-run the zero-training baseline scorer of phase P11 through the
+   widened score script, under its own label. Its counts must equal the counts
+   of the baseline scorecard, and its metrics must equal the baseline metrics.
+   The run also gives the baseline its per-segment file. Then run the aggregate
+   of a later scorecard against that label, or the baseline against itself when
+   no later scorecard exists. A self-pairing must show a zero mean difference
+   and an interval of zero width. The dev card must show the per-category
+   counts, the length buckets, and the failure kinds. That card is the first
+   diagnostic deliverable of the capability track.
 
 ## The budget
 

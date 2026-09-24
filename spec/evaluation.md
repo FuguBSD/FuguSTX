@@ -11,23 +11,23 @@ Evaluation promotes a model version, and a scorecard lands in
 [the artifacts bucket](corpus.md#cor-buckets). This is the FuguTTX D5 pattern.
 Three tiers make the evaluation:
 
-| Tier    | Where                        | What                                                                                                                                      |
-| ------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| tier T0 | CI, CPU, every commit        | Score script on the [dev split](corpus.md#cor-lanes): balanced accuracy, the false-positive rate on the human set, and category agreement |
-| tier T1 | CI, CPU                      | Promotion sweep against the [eval lane](corpus.md#cor-lanes), gated                                                                       |
-| tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                                                                                          |
+| Tier    | Where                        | What                                                                                                                                              |
+| ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tier T0 | CI, CPU, every commit        | Score script on the [dev split](corpus.md#cor-lanes): balanced accuracy and category agreement                                                    |
+| tier T1 | CI, CPU                      | Promotion sweep against the [eval lane](corpus.md#cor-lanes), gated: the two dev metrics, plus the false-positive rate on the later-era human set |
+| tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                                                                                                  |
 
 The baseline scorecard in [the artifacts bucket](corpus.md#cor-buckets) holds
 the pins, the counts, and the model hash. The first baseline run fixes each tier
 T1 threshold (EVL-TIERS-5). The pilot bar of [T13](DECISIONS.md#t13) sits in
 this document beside the thresholds (EVL-TIERS-10). The table below defines the
-three metrics:
+three metrics, and it names the tier of each one:
 
-| Metric              | Definition                                                                            | Direction |
-| ------------------- | ------------------------------------------------------------------------------------- | --------- |
-| Balanced accuracy   | The mean of the recall on each verdict class, per segment                             | Higher    |
-| False-positive rate | The share of the segments of the later-era human set with a machine verdict           | Lower     |
-| Category agreement  | The share of matching categories on the segments that both sides mark machine-written | Higher    |
+| Metric              | Definition                                                                            | Direction | Tier   |
+| ------------------- | ------------------------------------------------------------------------------------- | --------- | ------ |
+| Balanced accuracy   | The mean of the recall on each verdict class, per segment                             | Higher    | T0, T1 |
+| False-positive rate | The share of the segments of the later-era human set with a machine verdict           | Lower     | T1     |
+| Category agreement  | The share of matching categories on the segments that both sides mark machine-written | Higher    | T0, T1 |
 
 A promotion review compares the next scorecard against the baseline scorecard by
 hand, and no job reads a threshold.
@@ -35,9 +35,10 @@ hand, and no job reads a threshold.
 - **EVL-TIERS-1** — Each promotion must write a scorecard to the artifacts
   bucket.
 - **EVL-TIERS-2** — CI must run tier T0 on the CPU, on every commit. The score
-  script scores the dev split on the three metrics.
+  script scores the dev split on balanced accuracy and category agreement.
 - **EVL-TIERS-3** — CI must run tier T1 on the CPU. The gated promotion sweep
-  runs against the eval lane.
+  runs against the eval lane, and it adds the false-positive rate on the
+  later-era human set.
 - **EVL-TIERS-4** — The artifact suite of tier T2 must run in OpenBSD guests
   under FuguVM.
 - **EVL-TIERS-5** — The first baseline run fixes each tier T1 threshold. A
