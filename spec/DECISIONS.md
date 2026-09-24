@@ -1,7 +1,7 @@
 # Decisions
 
-These eleven decisions control all plans. A plan must not go against a decision.
-To change a decision, change this document first.
+These decisions control all plans. A plan must not go against a decision. To
+change a decision, change this document first.
 
 <a id="t1"></a>
 
@@ -42,26 +42,26 @@ the scores, the product drops it, and LEARNING records why. Details:
 
 <a id="t5"></a>
 
-## T5 — Teachers: Qwen3-32B writes the sentences, and two UD parsers label them
+## T5 — Generators: two model families write the mirrors, and a judge admits each pair
 
 Qwen3-32B under vLLM on the train instance stays the FuguTTX teacher, served the
-same way, and it proposes the text. Two independent purpose-built UD parsers
-propose the annotation of each sentence. The judge admits a record only when
-both agree and the structural checks pass. This mirrors the FuguTTX rule that a
-teacher output enters training only through a filter. A self-agreement check of
-one model measures its consistency, not its correctness, and LEARNING batch 2
-records that measurement. The FuguTTX judge compares a record against its source
-chunk. Two independent annotators are the analog of that grounded check for a
-labeling task. Details: [training](training.md).
+same way, and it is one generator. A second generator of a different model
+family writes a share of the mirrors through its API. No split then carries the
+signature of one family. The judge admits a pair only when three checks pass.
+The generator has not memorized the human document, the mirror holds no sentence
+of the original, and the structure matches. This mirrors the FuguTTX rule that a
+teacher output enters training only through a filter. Details:
+[training](training.md).
 
 <a id="t6"></a>
 
 ## T6 — Corpus lanes: two lanes, and the lane rule is absolute
 
-The training lane holds redistributable data. The eval lane holds held-out data.
-Eval data must never enter training. Contamination drives the rule here. Author
-copyright drives it in FuguTTX D6. The mechanics are identical, so the rehearsal
-is faithful. Details: [corpus](corpus.md).
+The training lane holds redistributable pairs. The eval lane holds held-out
+pairs, plus a human set from a later era than every training document. Eval data
+must never enter training. Contamination drives the rule here. Author copyright
+drives it in FuguTTX D6. The mechanics are identical, so the rehearsal is
+faithful. Details: [corpus](corpus.md).
 
 <a id="t7"></a>
 
@@ -91,7 +91,7 @@ is EUR 300 per month. Details: [infrastructure](infrastructure.md).
 
 <a id="t10"></a>
 
-## T10 — The annotation contract is engine-independent
+## T10 — The finding contract is engine-independent
 
 The output format must not expose the language model. A future purpose-built
 engine can replace the model without a client change. This escape hatch is a
@@ -113,3 +113,36 @@ evidence, and it holds no per-entry prose.
 
 A learning that contradicts the FuguTTX specification must become a FuguTTX
 specification change, not a note. Details: [learning](LEARNING.md).
+
+<a id="t12"></a>
+
+## T12 — Method: the model learns from contrastive pairs, not from a grammar
+
+The goal is the tells of machine-written prose in English technical text. The
+engine reports one finding per segment, and an agent repairs the text from the
+findings. The model learns from aligned pairs: a human document, and a mirror of
+the same facts. A generator writes the mirror without sight of the human prose.
+A grammar analyzer with a rulebook loses on three counts. It sees only what the
+grammar exposes, and the measured tells are content-shaped. A rulebook chases
+each model generation by hand, and a pair corpus regenerates. The measured basis
+is a probe of 2026-09-24 with Claude Opus on OpenBSD 3.0 manual pages. A famous
+page sits in the training set of the generator: strlcpy.3 returns at recall
+ratio 0.99, and photurisd.8, deleted early, at 0.12. A mirror written from a
+structure skeleton plus the source code rebuilds a memorized page, cat.1 at
+0.93. Surface lexical markers do not separate a human page from its mirror; the
+differences are completeness, rationale sentences, and invented facts. The regex
+`ste-lint` of the org pack stays the style gate of every FuguBSD repository, and
+FuguSTX builds no style checker. Details: [corpus](corpus.md),
+[engine](engine.md).
+
+<a id="t13"></a>
+
+## T13 — The pilot gate: a zero-training baseline first, and one bar
+
+Before the first SFT pass on a pair corpus, a zero-training baseline scores the
+base model on the same pairs, as a perplexity contrast. The SFT pass is a
+refinement of that baseline. The pilot commits to the method when the tier T1
+sweep clears one bar. The in-domain balanced accuracy is above 0.85, and the
+false-positive rate on the later-era human set is under 0.10. Below the bar, the
+operator decides, and LEARNING records why. Details:
+[evaluation](evaluation.md).

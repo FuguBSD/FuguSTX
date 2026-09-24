@@ -1,7 +1,7 @@
 # Evaluation
 
 Three tiers measure the engine. [The tiers](#evl-tiers) define the tier table
-and the thresholds. [The artifact suite](#evl-suite) defines the tier T2 checks.
+and the metrics. [The artifact suite](#evl-suite) defines the tier T2 checks.
 
 <a id="evl-tiers"></a>
 
@@ -11,29 +11,29 @@ Evaluation promotes a model version, and a scorecard lands in
 [the artifacts bucket](corpus.md#cor-buckets). This is the FuguTTX D5 pattern.
 Three tiers make the evaluation:
 
-| Tier    | Where                        | What                                                                   |
-| ------- | ---------------------------- | ---------------------------------------------------------------------- |
-| tier T0 | CI, CPU, every commit        | Score script on the [dev split](corpus.md#cor-lanes): UPOS, lemma, LAS |
-| tier T1 | CI, CPU                      | Promotion sweep against the [eval lane](corpus.md#cor-lanes), gated    |
-| tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                       |
+| Tier    | Where                        | What                                                                                                                                      |
+| ------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| tier T0 | CI, CPU, every commit        | Score script on the [dev split](corpus.md#cor-lanes): balanced accuracy, the false-positive rate on the human set, and category agreement |
+| tier T1 | CI, CPU                      | Promotion sweep against the [eval lane](corpus.md#cor-lanes), gated                                                                       |
+| tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                                                                                          |
 
-The table below holds the tier T1 thresholds (EVL-TIERS-5). The baseline
-scorecard in [the artifacts bucket](corpus.md#cor-buckets) holds the pins, the
-counts, and the model hash:
+The baseline scorecard in [the artifacts bucket](corpus.md#cor-buckets) holds
+the pins, the counts, and the model hash. The first baseline run fixes each tier
+T1 threshold (EVL-TIERS-5). The table below defines the three metrics:
 
-| Treebank | UPOS   | Lemma  | LAS    |
-| -------- | ------ | ------ | ------ |
-| ewt      | 0.9354 | 0.9509 | 0.7719 |
-| gum      | 0.9310 | 0.9492 | 0.7647 |
-| pud      | 0.9515 | 0.9613 | 0.7817 |
+| Metric              | Definition                                                                            | Direction |
+| ------------------- | ------------------------------------------------------------------------------------- | --------- |
+| Balanced accuracy   | The mean of the recall on each verdict class, per segment                             | Higher    |
+| False-positive rate | The share of the segments of the later-era human set with a machine verdict           | Lower     |
+| Category agreement  | The share of matching categories on the segments that both sides mark machine-written | Higher    |
 
-A promotion review compares the next scorecard against these values by hand. No
-job reads the table.
+A promotion review compares the next scorecard against the baseline scorecard by
+hand, and no job reads a threshold.
 
 - **EVL-TIERS-1** — Each promotion must write a scorecard to the artifacts
   bucket.
 - **EVL-TIERS-2** — CI must run tier T0 on the CPU, on every commit. The score
-  script scores the dev split on UPOS, lemma, and LAS.
+  script scores the dev split on the three metrics.
 - **EVL-TIERS-3** — CI must run tier T1 on the CPU. The gated promotion sweep
   runs against the eval lane.
 - **EVL-TIERS-4** — The artifact suite of tier T2 must run in OpenBSD guests
@@ -41,9 +41,8 @@ job reads the table.
 - **EVL-TIERS-5** — The first baseline run fixes each tier T1 threshold. A
   threshold in this document before that run is a guess. The specification must
   not hold a guess.
-- **EVL-TIERS-6** — The score script must match the scores of the
-  [UD tools](https://github.com/UniversalDependencies/tools) scorer `eval.py` on
-  UPOS, lemma, and LAS.
+- **EVL-TIERS-6** — The score script must compute each metric from the confusion
+  counts, and the scorecard must hold the counts.
 - **EVL-TIERS-7** — One command must read each scorecard of the artifacts bucket
   and print the scores. The command must not hold a threshold, because the
   promotion review stays a human act.
@@ -51,6 +50,8 @@ job reads the table.
   `runs/<run identifier>/scorecard-<name>.json`. This document holds the one
   definition of that form. Each component that writes such a key, or reads one,
   must follow it.
+- **EVL-TIERS-9** — The first scorecard of a pair corpus must score the base
+  model with no training pass. Each later scorecard must compare against it.
 
 <a id="evl-suite"></a>
 
@@ -64,9 +65,8 @@ FuguTTX IAC-DEV, FuguTTX IAC-IMAGE.
 
 - **EVL-SUITE-1** — The artifact must build and run under
   `pledge("stdio rpath")` and unveil.
-- **EVL-SUITE-2** — Two guests must produce byte-identical annotations for the
-  same input. A difference fails the
-  [determinism contract](engine.md#eng-determ).
+- **EVL-SUITE-2** — Two guests must produce byte-identical findings for the same
+  input. A difference fails the [determinism contract](engine.md#eng-determ).
 - **EVL-SUITE-3** — Guest scores must equal host scores on a sample.
 - **EVL-SUITE-4** — The suite must measure and record cold start and throughput.
   These are measurements, not gates.

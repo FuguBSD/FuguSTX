@@ -1,13 +1,14 @@
 # FuguSTX
 
-An embeddable English linguistic analysis engine for prose linters, built as the
-pilot of FuguTTX. FuguSTX turns raw English text into offset-faithful
-annotations: tokens, sentences, POS tags, lemmas, features, and dependencies. A
-linter consumes the annotations and stays a rulebook.
+FuguSTX finds the tells of machine-written prose in English technical text,
+built as the pilot of FuguTTX. The engine reads a document and reports one
+finding per sentence: the byte offsets, a verdict, and a tell category. A tool
+or an agent repairs the text from the findings.
 
-The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU only. The `stx`
-harness, Perl 5 over Fugu, computes every byte offset, and the model labels the
-tokens. The build rehearses the FuguTTX production pipeline at small scale.
+The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU only. The model
+learns from pairs of a human document and a machine mirror of the same facts.
+The `stx` harness, Perl 5 over Fugu, computes every byte offset. The build
+rehearses the FuguTTX production pipeline at small scale.
 
 ## Commands
 
