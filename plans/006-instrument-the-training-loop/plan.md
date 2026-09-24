@@ -23,9 +23,11 @@ Packages 1 and 2 land now: the run dispatch by name with a seed, and the
 experiment card. Each one lands with its tests and its register note. No
 decision blocks them, and no GPU run is part of them. Packages 3 to 7 wait on
 phase P11, the pair corpus. Each one reads the dev split, the labels, or the
-zero-training baseline scorecard of that phase. Plan 007 waits on this plan and
-on phase P12. It compares seeded runs through the scorecard that this plan
-defines. The roadmap holds this plan as a part of phase P7.
+zero-training baseline scorecard of that phase. The campaign of plan 007 waits
+on this plan and on phase P12. It compares seeded runs through the scorecard
+that this plan defines. Step 1 of plan 007 also lands now, and its edit of the
+same `train/*.yml` files is independent of package 1. The roadmap holds this
+plan as a part of phase P7.
 
 EVL-TIERS stays partial. The tier T2 suite (EVL-TIERS-4) waits for phase P5.
 EVL-TIERS-5 and EVL-TIERS-10 wait on the baseline run, in phases P11 and P12.
@@ -36,9 +38,9 @@ TRN-EXEC is done, and the implementation appends one rule to it. A run must
 record its seed in the run log and in each scorecard. The unit stays done, so
 this plan cites it under `Extends:`.
 
-TRN-SFT is partial. This plan adds a seed and an eval set to each SFT
-configuration, and it implements no rule of the unit. The admitted pairs and the
-format of TRN-SFT-1 and TRN-SFT-2 land in phase P12.
+TRN-SFT is open. This plan adds a seed and an eval set to each SFT
+configuration, and it implements no rule of the unit. Its rules land in phase
+P12.
 
 ENG-SPLIT and IAC-APPLY stay partial. The `kind` field touches the harness, and
 the workflow inputs touch the dispatch jobs. Neither implements a rule of those

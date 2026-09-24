@@ -18,10 +18,16 @@ the tier T1 review. The roadmap holds this work as phase P7, with plan 006.
 
 ## Status
 
-Every step waits on phase P11, the pair corpus, and on phase P12, the first SFT
+Step 1 lands now: a configuration change with no training run. It moves every
+configuration to the recipe of decision T3 before phase P12. The first SFT
+campaign on the pair corpus then runs that recipe. Plan 006 edits the same
+files: its package 1 adds the `seed` key, and its package 3 adds the eval set.
+Step 1 changes the precision, the adapter, and the attention backend, so the two
+plans make independent edits of the same files. `train/sft-aug.yml` leaves
+`train/` under package 1 of plan 006, and this plan does not change it. Every
+other step waits on phase P11, the pair corpus, and on phase P12, the first SFT
 campaign on it. The campaign also waits on the instruments of plan 006: the seed
-input, the eval loss, the scorecard counts, and the paired bootstrap. No step of
-this plan lands before them, the configuration change included.
+input, the eval loss, the scorecard counts, and the paired bootstrap.
 
 No decision blocks the campaign. Decision T3 sets bf16 for a model that fits the
 GPU with its optimizer states, and every configuration of this plan follows it.
@@ -30,7 +36,7 @@ test of the CPT pass. This plan runs that test. Decision T13 names the
 zero-training baseline as the comparison point, and each arm of this plan pairs
 against it.
 
-TRN-CPT is partial. The campaign runs the pass on the prose lane (TRN-CPT-1),
+TRN-CPT is open. The campaign runs the pass on the prose lane (TRN-CPT-1),
 applies the drop rule (TRN-CPT-2), and records the reason (TRN-CPT-3).
 
 TRN-EXEC is done, and the implementation appends two rules to it. A
@@ -38,7 +44,7 @@ configuration must name its attention backend, and sample packing must run on a
 packing-capable backend. The precision and the adapter of a configuration must
 follow decision T3. The unit stays done, so this plan cites it under `Extends:`.
 
-TRN-SFT is partial, and phase P12 lands its absent rules. This plan adds SFT
+TRN-SFT is open, and phase P12 lands its rules. This plan adds SFT
 configurations and runs SFT passes, and it implements no rule of the unit.
 
 EVL-TIERS stays partial. This plan reads the scorecards and writes the measured
@@ -135,19 +141,16 @@ before the first dispatch.
 
 ## Order of work
 
-1. Move the configurations to the T3 recipe with flash attention. The settings
-   are `load_in_4bit: false`, `adapter: lora`, `lora_r: 64`, `lora_alpha: 128`,
-   `flash_attention: true`, and the seed key. The SFT configurations also take
-   the eval set of plan 006. `cpt.yml` trains a completion dataset on the prose
-   lane (TRN-CPT-1), and it takes no eval set. Sample packing stays, and the
-   first run log must show no packing warning. Add `train/sft-full.yml`: no
-   adapter, learning rate 0.00002, warmup 3 percent, and a cosine schedule. It
-   keeps `flash_attention: true`, sample packing, `bf16: true`, gradient
-   checkpointing, the seed key, and the eval set. Replace the SFT row of the
-   compute budget table with the T3 recipe. Add a row for the full fine-tune.
-   Append two rules to TRN-EXEC. A configuration must name its attention
-   backend, and sample packing must run on a packing-capable backend. The
-   precision and the adapter of a configuration must follow decision T3.
+1. Move the configurations to the T3 recipe with flash attention. Lands now. The
+   settings are `load_in_4bit: false`, `adapter: lora`, `lora_r: 64`,
+   `lora_alpha: 128`, and `flash_attention: true`. `cpt.yml` keeps its
+   completion dataset, and it takes no eval set. Sample packing stays. Add
+   `train/sft-full.yml` as a copy of `train/sft-base.yml`. It takes no adapter,
+   learning rate 0.00002, warmup 3 percent, and a cosine schedule. Replace the
+   SFT row of the compute budget table with the T3 recipe. Add a row for the
+   full fine-tune. Append two rules to TRN-EXEC. A configuration must name its
+   attention backend, and sample packing must run on a packing-capable backend.
+   The precision and the adapter of a configuration must follow decision T3.
 2. Teach the driver a run with no adapter. `cmd_merge` reads the `adapter` key
    of the configuration, and it copies the output as the merged model when the
    key is absent. The `gguf` verb of `scripts/train` then converts the merged
@@ -155,8 +158,9 @@ before the first dispatch.
    changes.
 3. Write the card. Read the price first (TRN-INST-1). Dispatch `up` with an
    eight-hour lease.
-4. Dispatch `cpt` once and `merge-cpt` once. The merge is the base of the three
-   CPT seeds. The CPT pass takes the seed 11 in its own configuration.
+4. Dispatch `cpt` once and `merge-cpt` once. The run log must show no packing
+   warning. The merge is the base of the three CPT seeds. The CPT pass takes the
+   seed 11 in its own configuration.
 5. For each seed, dispatch the `sft` action with `sft-base`, then `gguf`, then
    `score` on the dev split. Repeat the three with `sft-cpt`. Eighteen
    dispatches. Each scorecard carries its seed and label, for example

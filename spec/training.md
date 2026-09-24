@@ -89,8 +89,8 @@ from the tell inventory of [the finding schema](engine.md#eng-schema). Qwen3-32B
 labels the mirrors of the second generator, and a model of the family of the
 second generator labels the Qwen3-32B mirrors.
 
-The first baseline run fixes each threshold and each bound, and this document
-holds no guess ([EVL-TIERS-5](evaluation.md#evl-tiers)).
+The experiment card of the first corpus campaign fixes each threshold and each
+bound, and this document holds no guess (TRN-TEACH-10).
 
 - **TRN-TEACH-1** — vLLM must serve the Qwen3-32B generator on the train
   instance.
@@ -112,6 +112,10 @@ holds no guess ([EVL-TIERS-5](evaluation.md#evl-tiers)).
 - **TRN-TEACH-9** — The judge must drop the target of a segment whose two passes
   disagree. It must reject a pair whose share of dropped segments exceeds the
   bound.
+- **TRN-TEACH-10** — The experiment card of the first corpus campaign must state
+  each threshold and each bound of the judge before the first admission. This
+  document must hold each value after that campaign. A value in this document
+  before that campaign is a guess, and the specification must not hold a guess.
 
 <a id="trn-exec"></a>
 
