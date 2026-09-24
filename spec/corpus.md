@@ -77,7 +77,8 @@ labels each segment of the pair, and the labels are the training targets.
   memorization check of the judge filter.
 - **COR-PAIRS-4** — The alignment must label each segment of the pair against
   its counterpart, with a label from the tell inventory of
-  [the finding schema](engine.md#eng-schema).
+  [the finding schema](engine.md#eng-schema). The labeler and the mechanical
+  check of [the judge filter](training.md#trn-teach) produce the label.
 - **COR-PAIRS-5** — Each pair must carry its provenance: the source tag, the
   generator identity and version, the seed, and the prompt hash.
 - **COR-PAIRS-6** — The human documents must span more than one era and each

@@ -70,7 +70,7 @@ seed from the run and the batch. A re-run of one batch therefore repeats its
 mirrors. A generator prompt must hold no sentence of any human document of the
 corpus.
 
-The judge filter applies three checks to each proposed pair:
+The judge filter applies four checks to each proposed pair:
 
 1. The generator has not memorized the human document. A recall probe of the
    generator, or the n-gram containment of a source-only draft against the
@@ -79,6 +79,15 @@ The judge filter applies three checks to each proposed pair:
    mirror against the document stays under the threshold.
 3. The mirror follows the structure of the document: the section skeleton
    matches, the segment count stays within the bound, and the document renders.
+4. The alignment labels pass. A labeler of a different model family than the
+   generator proposes each label, and two seeded passes agree. The mechanical
+   check of each category passes.
+
+The labeler sees the segmented original and the segmented mirror, both numbered.
+It returns the counterpart index of each mirror segment, or none, and a label
+from the tell inventory of [the finding schema](engine.md#eng-schema). Qwen3-32B
+labels the mirrors of the second generator, and a model of the family of the
+second generator labels the Qwen3-32B mirrors.
 
 The first baseline run fixes each threshold and each bound, and this document
 holds no guess ([EVL-TIERS-5](evaluation.md#evl-tiers)).
@@ -88,13 +97,21 @@ holds no guess ([EVL-TIERS-5](evaluation.md#evl-tiers)).
 - **TRN-TEACH-2** — The endpoint must bind to localhost.
 - **TRN-TEACH-3** — The generation client must reach the endpoint over an SSH
   tunnel.
-- **TRN-TEACH-4** — The judge filter must admit a pair only when the three
-  checks pass.
+- **TRN-TEACH-4** — The judge filter must admit a pair only when the four checks
+  pass.
 - **TRN-TEACH-5** — The filter must log each rejected pair with its reason.
 - **TRN-TEACH-6** — LEARNING must record the filter design and the rejection
   rates.
 - **TRN-TEACH-7** — A generator of a second model family must write a share of
-  the mirrors through its API, under the spend cap of TRN-BUDGET-2.
+  the mirrors through a headless client session under a dedicated profile. The
+  profile must carry no rule file, no memory, and no tool except the output
+  write.
+- **TRN-TEACH-8** — A labeler of a different model family than the generator of
+  the pair must propose each alignment label. It must run two passes with
+  distinct seeds.
+- **TRN-TEACH-9** — The judge must drop the target of a segment whose two passes
+  disagree. It must reject a pair whose share of dropped segments exceeds the
+  bound.
 
 <a id="trn-exec"></a>
 
@@ -138,5 +155,6 @@ the flagship price.
 
 - **TRN-BUDGET-1** — A cost estimate must not assume a run cheaper than one
   hour.
-- **TRN-BUDGET-2** — A generator that bills per token must run under a spend cap
-  per campaign, read from the published price before the campaign.
+- **TRN-BUDGET-2** — A generator that runs outside the train instance must
+  record its call count and its token count per campaign. A campaign must state
+  its call budget before the first call.

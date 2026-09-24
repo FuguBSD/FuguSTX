@@ -19,7 +19,9 @@ Three tiers make the evaluation:
 
 The baseline scorecard in [the artifacts bucket](corpus.md#cor-buckets) holds
 the pins, the counts, and the model hash. The first baseline run fixes each tier
-T1 threshold (EVL-TIERS-5). The table below defines the three metrics:
+T1 threshold (EVL-TIERS-5). The pilot bar of [T13](DECISIONS.md#t13) sits in
+this document beside the thresholds (EVL-TIERS-10). The table below defines the
+three metrics:
 
 | Metric              | Definition                                                                            | Direction |
 | ------------------- | ------------------------------------------------------------------------------------- | --------- |
@@ -52,6 +54,9 @@ hand, and no job reads a threshold.
   must follow it.
 - **EVL-TIERS-9** — The first scorecard of a pair corpus must score the base
   model with no training pass. Each later scorecard must compare against it.
+- **EVL-TIERS-10** — The operator must set the pilot bar of decision
+  [T13](DECISIONS.md#t13) after the zero-training baseline run, and this
+  document must hold it. A bar before that run is a guess.
 
 <a id="evl-suite"></a>
 

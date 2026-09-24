@@ -42,16 +42,19 @@ the scores, the product drops it, and LEARNING records why. Details:
 
 <a id="t5"></a>
 
-## T5 — Generators: two model families write the mirrors, and a judge admits each pair
+## T5 — Generators: two model families write the mirrors, a cross-family labeler aligns, and a judge admits each pair
 
 Qwen3-32B under vLLM on the train instance stays the FuguTTX teacher, served the
 same way, and it is one generator. A second generator of a different model
-family writes a share of the mirrors through its API. No split then carries the
-signature of one family. The judge admits a pair only when three checks pass.
-The generator has not memorized the human document, the mirror holds no sentence
-of the original, and the structure matches. This mirrors the FuguTTX rule that a
-teacher output enters training only through a filter. Details:
-[training](training.md).
+family writes a share of the mirrors through a headless client session under a
+dedicated profile. No split then carries the signature of one family. A labeler
+of a different model family than the generator of the pair proposes the
+alignment label of each segment. Two seeded passes must agree, and the judge
+checks each label mechanically. The judge admits a pair only when four checks
+pass. The generator has not memorized the human document, the mirror holds no
+sentence of the original, the structure matches, and the labels pass. This
+mirrors the FuguTTX rule that a teacher output enters training only through a
+filter. Details: [training](training.md).
 
 <a id="t6"></a>
 
@@ -142,8 +145,7 @@ FuguBSD repository, and FuguSTX builds no style checker. Details:
 
 Before the first SFT pass on a pair corpus, a zero-training baseline scores the
 base model on the same pairs, as a perplexity contrast. The SFT pass is a
-refinement of that baseline. The pilot commits to the method when the tier T1
-sweep clears one bar. The in-domain balanced accuracy is above 0.85, and the
-false-positive rate on the later-era human set is under 0.10. Below the bar, the
-operator decides, and LEARNING records why. Details:
-[evaluation](evaluation.md).
+refinement of that baseline. The operator sets the pilot bar after the baseline
+run, and the evaluation document holds it. The pilot commits to the method when
+the tier T1 sweep clears the bar. Below the bar, the operator decides, and
+LEARNING records why. Details: [evaluation](evaluation.md).
