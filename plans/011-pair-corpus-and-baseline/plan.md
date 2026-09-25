@@ -2,9 +2,10 @@
 
 This plan builds the pair corpus of decision T12, and it admits each pair
 through the judge of decision T5. Then it runs the zero-training baseline of
-decision T13 on the admitted pairs. The phase ends with a baseline scorecard,
-the bar and the tier T1 thresholds, and the LEARNING batch of the campaign. No
-training pass is part of this plan. The roadmap holds this work as phase P11.
+decision T13 on the admitted pairs and the later-era human-only set. The phase
+ends with a baseline scorecard, the bar and the tier T1 thresholds, and the
+LEARNING batch of the campaign. No training pass is part of this plan. The
+roadmap holds this work as phase P11.
 
 - Implements: ENG-SPLIT
 - Implements: ENG-SCHEMA without ENG-SCHEMA-1
@@ -14,8 +15,7 @@ training pass is part of this plan. The roadmap holds this work as phase P11.
 - Implements: TRN-TEACH
 - Implements: TRN-BUDGET
 - Implements: LIC-LIC
-- Implements: LIC-RELEASE without LIC-RELEASE-1 without LIC-RELEASE-2 without
-  LIC-RELEASE-4
+- Implements: LIC-RELEASE without LIC-RELEASE-1 without LIC-RELEASE-2
 - Implements: EVL-TIERS without EVL-TIERS-2 without EVL-TIERS-3 without
   EVL-TIERS-4 without EVL-TIERS-6
 - Implements: LRN-DELIVER without LRN-DELIVER-2 without LRN-DELIVER-3
@@ -34,7 +34,18 @@ on this plan through phase P12. The roadmap holds this plan as phase P11.
 
 ENG-SPLIT is partial. ENG-SPLIT-3 and ENG-SPLIT-4 hold: the schema holds no
 offset field, and the harness is the only caller of llama.cpp. This plan lands
-ENG-SPLIT-1 and ENG-SPLIT-2, the Perl segmenter and its offsets.
+ENG-SPLIT-1 and ENG-SPLIT-2, the Perl segmenter and its offsets. The baseline
+scorer of package 7 runs its two models through the transformers library, and it
+calls no llama.cpp. ENG-SPLIT-4 therefore holds through the plan.
+
+Package 2 removes the `label` verb, so `bin/stx` holds the `segment` verb only
+from package 2 to phase P12. The old treebank pipeline leaves in packages 2 and
+3, and each package names the files that leave. The `promote` verb of
+`scripts/train` reads the dev scorecard of a run and copies the artifact. It
+calls no sweep, so it stays as it is. The scorecard writer and the key form of
+`t1.py` stay with it, and EVL-TIERS-1 and EVL-TIERS-8 hold. The baseline
+scorecard of package 7 goes through that writer under the label `baseline`. It
+promotes no artifact, because the baseline trains no model.
 
 ENG-SCHEMA is open. This plan lands ENG-SCHEMA-2 to ENG-SCHEMA-7: the segment
 record, the repair map, the registry, its version, and the generated copies.
@@ -42,7 +53,10 @@ ENG-SCHEMA-1 waits for `stx analyze` in phase P12, which runs the model under
 the generated grammar.
 
 COR-SOURCES, COR-PAIRS, and COR-LANES are open, and this plan lands every rule
-of each.
+of each. The pairs draw from the early and the middle release. The late release
+serves the later-era human-only set of the eval lane alone, and no page of it
+enters a pair (COR-LANES-3). COR-PAIRS-6 asks for more than one era, and the two
+training eras give it.
 
 TRN-TEACH is partial. TRN-TEACH-1 to TRN-TEACH-3 hold: the vLLM service, the
 localhost bind, and the tunnel. This plan lands TRN-TEACH-4 to TRN-TEACH-10. The
@@ -54,19 +68,24 @@ TRN-BUDGET is partial, and this plan lands TRN-BUDGET-2, the call and token
 record of the second generator. LIC-LIC is partial, and this plan lands
 LIC-LIC-2, the terms check of each generator.
 
-LIC-RELEASE is open. This plan lands LIC-RELEASE-3: each admitted record
-inherits the training lane and the provenance tags. LIC-RELEASE-1,
-LIC-RELEASE-2, and LIC-RELEASE-4 concern a released model, and no release is
-part of this plan.
+LIC-RELEASE is open. This plan lands LIC-RELEASE-3 and LIC-RELEASE-4. The
+provenance record of package 5 lands LIC-RELEASE-3: each admitted record
+inherits the training lane and the provenance tags. The license filter of
+package 3 lands LIC-RELEASE-4 for the human documents and the later-era set. The
+terms check of package 4 covers the mirrors. LIC-RELEASE-1 and LIC-RELEASE-2
+concern a released model, and no release is part of this plan.
 
 EVL-TIERS stays partial. EVL-TIERS-1, EVL-TIERS-7, and EVL-TIERS-8 hold: the
 scorecard write, the scorecard reader, and the key form. This plan lands the
 baseline scorecard of EVL-TIERS-9, and plan 006 lands the comparison half of the
-same rule. After the baseline run, the operator sets the tier T1 thresholds of
-EVL-TIERS-5 and the bar of EVL-TIERS-10. Package 8 writes them. The tier T0
-score of EVL-TIERS-2, the tier T1 sweep of EVL-TIERS-3, and the counts of
-EVL-TIERS-6 land in phase P12. The tier T2 suite of EVL-TIERS-4 waits for phase
-P5.
+same rule. The baseline scorecard holds the three metrics of
+[the evaluation document](../../spec/evaluation.md#evl-tiers) and the confusion
+counts, in the shape of every later scorecard. After the baseline run, the
+operator sets the tier T1 thresholds of EVL-TIERS-5 and the bar of EVL-TIERS-10.
+Package 8 writes them, and phase P12 runs the first SFT campaign against them.
+The tier T0 job of EVL-TIERS-2 and the tier T1 sweep of EVL-TIERS-3 land in
+phase P12. The score script of that phase lands EVL-TIERS-6, and the baseline
+scorecard follows its form. The tier T2 suite of EVL-TIERS-4 waits for phase P5.
 
 LRN-DELIVER-2 and LRN-DELIVER-3 change the FuguTTX repository. A FuguTTX plan
 lands each change.
@@ -102,12 +121,12 @@ Three risks follow from those facts.
 pair with human text on both sides, and that pair is label noise. The recall
 probe of package 5 drops such a page before it enters a pair (COR-PAIRS-3).
 [The confound risk](../../spec/risks.md#rsk-confound): a corpus of one era and
-one generator teaches the model era or generator identity. Three eras, two
-generator families in each split, and the later-era human set of the eval lane
-mitigate. [The generator drift risk](../../spec/risks.md#rsk-drift): the tells
-of the next model generation differ. The registry version of package 2 and the
-provenance of each pair let the corpus regenerate under a new inventory without
-a schema change.
+one generator teaches the model era or generator identity. Two eras in each
+split, two generator families in each split, and the later-era human set of the
+eval lane mitigate. [The generator drift risk](../../spec/risks.md#rsk-drift):
+the tells of the next model generation differ. The registry version of package 2
+and the provenance of each pair let the corpus regenerate under a new inventory
+without a schema change.
 
 The research summary of 2026-09-24 on the tells of machine prose supports the
 shape of the registry. Syntactic tells such as participial clauses and
@@ -121,14 +140,17 @@ The same summary weighs the zero-training baseline. A perplexity contrast
 between a base model and its instruct sibling separates human text from machine
 text at the document level. A sub-1B pair reaches near chance at the sentence
 level. No study measured a sub-1B pair on English technical prose, and technical
-prose has low perplexity by nature. Package 7 therefore scores at section
-granularity of at least 100 tokens, and it reports the per-segment number for
-information only. A memorized page scores machine-side under any perplexity
-method, so the baseline runs on the admitted pairs only.
+prose has low perplexity by nature. Package 7 therefore scores each segment
+through one cut on the contrast score, for the three metrics of the scorecard.
+It adds a section-level AUROC at sections of at least 100 tokens as a
+measurement, not a gate. A memorized page scores machine-side under any
+perplexity method, so the baseline scores the admitted pairs. The open question
+below covers the late pages of the human-only set.
 
 ## Order of work
 
-Each package sets the register row of its unit in the same change.
+Each package sets the register row of its unit in the same change. It also sets
+the row of each unit whose note cites a file that the package removes.
 
 1. **The segmenter.** ENG-SPLIT-1 and ENG-SPLIT-2. Lands now. Add a `segment`
    verb to `bin/stx`. It reads text on standard input, and it writes one JSON
@@ -154,30 +176,57 @@ Each package sets the register row of its unit in the same change.
    closed set (ENG-SCHEMA-3). A retired row stays in the registry and leaves the
    grammar (ENG-SCHEMA-6), and `none` is the only reserved id (ENG-SCHEMA-7).
    The old grammar `share/annotation.gbnf` leaves `share/` in this package, and
-   the schema and grammar modules of the corpus package read the generated
-   grammar. The label verb of `bin/stx` leaves with the file in the same change,
-   and its subtests of `t/stx.t` leave with it. Tests: a test compares each
-   committed copy byte for byte with a fresh generation from the registry
-   (ENG-SCHEMA-4). A second test checks each id, each level, each repair action,
-   and the evidence of each active row.
+   every reader of its serialization leaves with it. The `label` verb of
+   `bin/stx` and its subtests of `t/stx.t` leave. The harness then holds the
+   `segment` verb only, until `stx analyze` of phase P12. `schema.py`,
+   `wordtable.py`, and `pairs.py` leave with `test_schema.py`,
+   `test_wordtable.py`, and `test_pairs.py`. The old `judge.py` and `teacher.py`
+   read `schema.py`, so they leave with `test_judge.py` and `test_teacher.py`.
+   Packages 4 and 5 write the new ones. The pair write of `upload.py` and its
+   test leave with `pairs.py`. The sweep of `t1.py` leaves: the label run, the
+   `--stx` default, the split read, the treebank counts, and the sweep tests of
+   `test_t1.py`. `t1.py` keeps the scorecard record, the key form, the
+   aggregate, and the hash, and `cards.py` keeps its reader. The `score` verb of
+   `scripts/train` and its step of `train.yml` leave. The `teach-serve` and
+   `teach` verbs keep the serve step and the tunnel (TRN-TEACH-1 to
+   TRN-TEACH-3). The client call, the filter call, and the pairs rebuild of
+   `teach` leave with the modules. Packages 4 and 5 add the new calls.
+   `t/train.t` follows each step. The workflow `t1.yml` leaves, and the tier T1
+   sweep returns in phase P12 on `stx analyze`. `train/sft-base.yml` names the
+   old grammar in a comment, and the comment names the generated grammar from
+   this package on. The three SFT configurations stay for plan 007 and phase
+   P12. `gbnf.py` stays as the grammar parser of the tests. The `evaluate` row
+   of the stage map of `train/RUNBOOK.md` drops `score` and the sweep. Tests: a
+   test compares each committed copy byte for byte with a fresh generation from
+   the registry (ENG-SCHEMA-4). A second test checks each id, each level, each
+   repair action, and the evidence of each active row.
 3. **The sources.** COR-SOURCES-1, COR-SOURCES-2, COR-SOURCES-3, COR-SOURCES-5,
-   and COR-SOURCES-6. Lands now, and the fetch step needs the network. Rewrite
-   `fetch.py` against the source table of
+   COR-SOURCES-6, and LIC-RELEASE-4. Lands now, and the fetch step needs the
+   network. Rewrite `fetch.py` against the source table of
    [the corpus document](../../spec/corpus.md#cor-sources). The pipeline fetches
    each page from the OpenBSD tree through the cvsweb checkout URL at a pinned
    release tag. It records the tag (COR-SOURCES-1). It fetches the source files
    that each page describes at the same tag (COR-SOURCES-2). A page list per era
    names the pages: an early release, a middle release, and a late release. The
-   late release serves the later-era human-only set of package 6. The list
-   prefers a native page, one with no NetBSD id line. The license filter reads
-   the header of each page and of each source file. It excludes a page whose
-   license is not permissive (COR-SOURCES-3), and it excludes a page with no
-   provable license (COR-SOURCES-6). The pipeline strips the version-control id
-   lines and the license comment block from each page (COR-SOURCES-5). It
-   renders each page, and later each mirror, with `mandoc -T markdown` before
-   segmentation. Both sides then share one format, and the format matches the
-   target register. The first cut is about two hundred admitted pairs, and the
-   page list holds pages above that count for the rejection rate. Tests:
+   early and the middle release feed the pairs. The late release serves the
+   later-era human-only set of package 6 alone, and no page of it enters a pair
+   (COR-LANES-3). The list prefers a native page, one with no NetBSD id line.
+   The license filter reads the header of each page and of each source file. It
+   excludes a page whose license is not permissive (COR-SOURCES-3), and it
+   excludes a page with no provable license (COR-SOURCES-6). That filter lands
+   LIC-RELEASE-4 for the human documents and the later-era set. The pipeline
+   strips the version-control id lines and the license comment block from each
+   page (COR-SOURCES-5). It renders each page, and later each mirror, with
+   `mandoc -T markdown` before segmentation. Both sides then share one format,
+   and the format matches the target register. The first cut is about two
+   hundred admitted pairs, and the page list holds pages above that count for
+   the rejection rate. The old fetch path leaves with the treebank pipeline:
+   `conllu.py`, `gutenberg.py`, `gum_license.py`, `pipeline.py`, `score.py`,
+   `t0.py`, their tests, and `corpus_fakes.py`. The old `lanes.py` and
+   `upload.py` read the treebank record of `conllu.py`, so they leave here with
+   `test_lanes.py` and `test_upload.py`. Package 6 writes the new ones. The tier
+   T0 job of `check.yml` scores the treebank dev split, and it leaves with
+   `t0.py`. Phase P12 restores tier T0 on the new metrics. Tests:
    `test_fetch.py` covers the URL form, the tag record, the license filter, and
    the strip, on fixture pages and a fixture license block.
 4. **The generators.** TRN-TEACH-7, TRN-BUDGET-2, and LIC-LIC-2, over the held
@@ -229,39 +278,55 @@ Each package sets the register row of its unit in the same change.
    admitted pair holds the page and the mirror at one source tag (COR-PAIRS-1).
    It carries its provenance: the source tag, the generator identity and
    version, the seed, the prompt hash, and the inventory version (COR-PAIRS-5).
-   The admitted record takes the training lane shape with those tags
-   (LIC-RELEASE-3). Tests: `test_judge.py` covers each check on fixture pairs,
-   one rejection per reason, the agreement drop, and the provenance fields.
+   The admitted record takes the training lane shape with those tags, and that
+   provenance record lands LIC-RELEASE-3. Tests: `test_judge.py` covers each
+   check on fixture pairs, one rejection per reason, the agreement drop, and the
+   provenance fields.
 6. **The lanes and the splits.** COR-LANES-1 to COR-LANES-5, COR-PAIRS-6, and
-   COR-PAIRS-7. Waits on package 5. Rewrite `lanes.py` and `upload.py` for the
-   pairs. The split divides the admitted pairs by document: 80 percent train, 10
-   percent dev, and 10 percent test. No pair spans two splits, and the two pairs
-   of one page sit in one split (COR-LANES-5). Each split holds the mirrors of
-   both generator families (COR-PAIRS-7). The documents of each split span the
-   three eras, and the manual page is the one register of the pilot
-   (COR-PAIRS-6). The training lane holds the train and dev splits
+   COR-PAIRS-7. Waits on package 5. Write a new `lanes.py` and a new `upload.py`
+   for the pairs. The old modules left in package 3. The split divides the
+   admitted pairs by document: 80 percent train, 10 percent dev, and 10 percent
+   test. No pair spans two splits, and the two pairs of one page sit in one
+   split (COR-LANES-5). Each split holds the mirrors of both generator families
+   (COR-PAIRS-7). The documents of each split come from the early and the middle
+   release, so each split spans two eras. The manual page is the one register of
+   the pilot (COR-PAIRS-6). The training lane holds the train and dev splits
    (COR-LANES-1). The prose lane holds the human side of the train split only
    (COR-LANES-2). The eval lane holds the test split plus the later-era
-   human-only set of the late release (COR-LANES-3). `upload.py` puts the
-   training lane and the prose lane in `stx-corpus`, and the eval lane in
-   `stx-evalcorpus`. The lane rule is absolute: no eval file touches
-   `stx-corpus` (COR-LANES-4). Tests: `test_lanes.py` covers the split by
-   document, the family balance, the era span, and the refusal of an eval
-   record. `test_upload.py` covers the bucket of each lane.
+   human-only set of the late release, and no late page enters a pair
+   (COR-LANES-3). `upload.py` puts the training lane and the prose lane in
+   `stx-corpus`, and the eval lane in `stx-evalcorpus`. The lane rule is
+   absolute: no eval file touches `stx-corpus` (COR-LANES-4). Tests:
+   `test_lanes.py` covers the split by document, the family balance, the two-era
+   span, the late-page exclusion, and the refusal of an eval record.
+   `test_upload.py` covers the bucket of each lane.
 7. **The zero-training baseline.** EVL-TIERS-9, per decision T13. Waits on
-   package 6. Add a baseline scorer to the corpus package. It scores a
-   perplexity contrast between the Qwen3-0.6B base release and its instruct
-   release. It scores the admitted pairs of the dev split and of the eval lane,
-   one scorecard per split. The unit of the score is a section of at least 100
-   tokens, and the scorer merges a short section with the next one. It reports
-   the AUROC, and the true-positive rate at the false-positive rates 0.10 and
-   0.01. It reports the per-segment result for information. It runs on the CPU.
-   The scorecard holds the pins, the counts per verdict class, and the hash of
-   each model. The score script of plan 006 can then pair a later scorecard
-   against it. The scorecard goes to the artifacts bucket under the key form of
-   EVL-TIERS-8, with the label `baseline`. Tests: `test_baseline.py` covers the
-   section merge, the contrast score on fixture log-probability files, the AUROC
-   and the rates, and the scorecard key.
+   package 6. Add a baseline scorer to the corpus package. It runs the
+   Qwen3-0.6B base release and its instruct release through the transformers
+   library on the CPU, pinned by weight hash. It calls no llama.cpp, so
+   ENG-SPLIT-4 holds. The contrast score of a segment is the difference of the
+   per-token log-probability sums of the two models, divided by the token count.
+   One cut turns the score into a verdict. The scorer chooses the cut on the dev
+   split: the value with the highest balanced accuracy there. The experiment
+   card records the cut. The run then scores the three metrics of
+   [the evaluation document](../../spec/evaluation.md#evl-tiers), in the shape
+   of every later scorecard. It scores balanced accuracy on the segments of the
+   test split. It scores the false-positive rate on the later-era human-only
+   set. Every segment there carries the human label, so each machine verdict is
+   a false positive. It records category agreement as not applicable, because
+   the baseline gives no category. The scorecard holds the confusion counts of
+   each set, the pins, the hash of each model, and the cut. It adds the
+   section-level AUROC and the true-positive rate at the false-positive rates
+   0.10 and 0.01, at sections of at least 100 tokens. Those are measurements,
+   not gates, and the scorer merges a short section with the next one.
+   `cards.py` prints the new shape, so `make scorecards` reads the baseline
+   (EVL-TIERS-7). The scorecard goes to the artifacts bucket through the writer
+   of `t1.py`, under the key form of EVL-TIERS-8, with the label `baseline`. The
+   score script of plan 006 can then pair a later scorecard against it
+   (EVL-TIERS-9). Tests: `test_baseline.py` covers the contrast score on fixture
+   log-probability files, the cut choice, and the three metrics from fixture
+   verdicts. It also covers the section merge, the AUROC and the rates, and the
+   scorecard key.
 8. **The bar, the thresholds, and the LEARNING batch.** EVL-TIERS-5,
    EVL-TIERS-10, TRN-TEACH-6, TRN-TEACH-10, and LRN-DELIVER. Waits on package 7
    and on the operator. The operator reads the baseline scorecard and the
