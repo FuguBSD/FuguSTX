@@ -18,10 +18,11 @@ Three tiers make the evaluation:
 | tier T2 | OpenBSD guests, under FuguVM | The [artifact suite](#evl-suite)                                                                                                                  |
 
 The baseline scorecard in [the artifacts bucket](corpus.md#cor-buckets) holds
-the pins, the counts, and the model hash. The first baseline run fixes each tier
-T1 threshold (EVL-TIERS-5). The pilot bar of [T13](DECISIONS.md#t13) sits in
-this document beside the thresholds (EVL-TIERS-10). The table below defines the
-three metrics, and it names the tier of each one:
+the pins, the counts, and the model hash. The first scorecard that yields a
+metric fixes its tier T1 threshold (EVL-TIERS-5). The pilot bar of
+[T13](DECISIONS.md#t13) sits in this document beside the thresholds
+(EVL-TIERS-10). The table below defines the three metrics, and it names the tier
+of each one:
 
 | Metric              | Definition                                                                            | Direction | Tier   |
 | ------------------- | ------------------------------------------------------------------------------------- | --------- | ------ |
@@ -41,9 +42,9 @@ hand, and no job reads a threshold.
   later-era human set.
 - **EVL-TIERS-4** — The artifact suite of tier T2 must run in OpenBSD guests
   under FuguVM.
-- **EVL-TIERS-5** — The first baseline run fixes each tier T1 threshold. A
-  threshold in this document before that run is a guess. The specification must
-  not hold a guess.
+- **EVL-TIERS-5** — The first scorecard that yields a metric fixes its tier T1
+  threshold. A threshold in this document before that scorecard is a guess. The
+  specification must not hold a guess.
 - **EVL-TIERS-6** — The score script must compute each metric from the confusion
   counts, and the scorecard must hold the counts.
 - **EVL-TIERS-7** — One command must read each scorecard of the artifacts bucket
