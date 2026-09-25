@@ -40,7 +40,7 @@ This project omits no stage. It runs a CPT pass, and it has a promote step.
   `infra/persistent/RUNBOOK.md`.
 - **The promote rule.** TRN-EXEC-5 of `spec/training.md`. Promote copies the
   GGUF.
-- **The threshold policy.** `spec/evaluation.md`. A baseline run fixes the
-  thresholds.
+- **The threshold policy.** `spec/evaluation.md`. The first scorecard that
+  yields a metric fixes its threshold.
 - **The lease.** The `hours` input of `train.yml` sets the `stx:expires` tag.
   The watchdog reads it.

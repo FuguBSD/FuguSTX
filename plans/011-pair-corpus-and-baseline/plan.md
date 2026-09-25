@@ -80,18 +80,18 @@ scorecard write, the scorecard reader, and the key form. This plan lands the
 baseline scorecard of EVL-TIERS-9, and plan 006 lands the comparison half of the
 same rule. The baseline scorecard holds the three metrics of
 [the evaluation document](../../spec/evaluation.md#evl-tiers) and the confusion
-counts, in the shape of every later scorecard. After the baseline run, the
-operator sets the bar of EVL-TIERS-10 and two tier T1 thresholds of EVL-TIERS-5.
-The two are balanced accuracy and the false-positive rate, the metrics that the
-baseline yields. Package 8 writes them, and phase P12 runs the first SFT
-campaign against them. EVL-TIERS-5 lands here for those two metrics. It stays
-absent for category agreement, because the baseline emits no category. The
-register note of package 8 names that absent part. The first scorecard that
-emits categories fixes the category-agreement threshold in phase P12, and plan
-012 writes it. The tier T0 job of EVL-TIERS-2 and the tier T1 sweep of
-EVL-TIERS-3 land in phase P12. The score script of that phase lands EVL-TIERS-6,
-and the baseline scorecard follows its form. The tier T2 suite of EVL-TIERS-4
-waits for phase P5.
+counts, in the shape of every later scorecard. Under EVL-TIERS-5, the first
+scorecard that yields a metric fixes its tier T1 threshold. The baseline
+scorecard yields balanced accuracy and the false-positive rate, so it fixes
+those two thresholds. After the baseline run, the operator sets them and the bar
+of EVL-TIERS-10. Package 8 writes them, and phase P12 runs the first SFT
+campaign against them. This plan lands EVL-TIERS-5 for the two thresholds that
+the baseline yields. The register note of package 8 names the category-agreement
+threshold as absent. The first scorecard with categories, in phase P12, fixes
+that threshold, and phase P12 writes it. The tier T0 job of EVL-TIERS-2 and the
+tier T1 sweep of EVL-TIERS-3 land in phase P12. The score script of that phase
+lands EVL-TIERS-6, and the baseline scorecard follows its form. The tier T2
+suite of EVL-TIERS-4 waits for phase P5.
 
 LRN-DELIVER-2 and LRN-DELIVER-3 change the FuguTTX repository. A FuguTTX plan
 lands each change.
@@ -337,13 +337,13 @@ the row of each unit whose note cites a file that the package removes.
    EVL-TIERS-10, TRN-TEACH-6, TRN-TEACH-10, and LRN-DELIVER. Waits on package 7
    and on the operator. The operator reads the baseline scorecard and the
    rejection log. Then the operator sets the pilot bar and two tier T1
-   thresholds. Those are the thresholds of balanced accuracy and the
-   false-positive rate, the two metrics that the baseline yields. This package
-   writes the bar and those two thresholds into
+   thresholds. The baseline scorecard yields balanced accuracy and the
+   false-positive rate, so it fixes those two thresholds. This package writes
+   the bar and those two thresholds into
    [the evaluation document](../../spec/evaluation.md#evl-tiers) (EVL-TIERS-5,
    EVL-TIERS-10). The category-agreement threshold has no baseline number,
-   because the baseline emits no category. The first scorecard that emits
-   categories fixes it in phase P12, and plan 012 writes it. Until then, the
+   because the baseline emits no category. The first scorecard with categories,
+   in phase P12, fixes that threshold, and phase P12 writes it. Until then, the
    evaluation document holds no category-agreement threshold, as EVL-TIERS-5
    requires. This package writes each judge threshold and bound of the card into
    [the training document](../../spec/training.md#trn-teach) (TRN-TEACH-10). It
