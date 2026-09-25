@@ -38,12 +38,14 @@ holds this plan as phase P12.
 
 Plan 011 packages 2 and 3 remove the treebank pipeline, and each package names
 the files that leave. Among them are the `label` verb of `bin/stx`, `pairs.py`,
-`score.py`, `t0.py`, the sweep of `t1.py`, and the workflow `t1.yml`. From plan
-011 package 2 to this plan, `bin/stx` holds the `segment` verb only. `t1.py`
-holds the scorecard record, the key form, the aggregate, and the hash. Packages
-1, 4, and 5 write the pairs builder, the score script, and the sweep anew on
-`stx analyze`. They change no old module, except for the `score` verb of
-`scripts/train`.
+`score.py`, `t0.py`, the sweep of `t1.py`, and the workflow `t1.yml`. The
+`score` verb of `scripts/train` and its step of `train.yml` leave with them.
+From plan 011 package 2 to this plan, `bin/stx` holds the `segment` verb only.
+`t1.py` holds the scorecard record, the key form, the aggregate, and the hash.
+Packages 1, 4, and 5 write the pairs builder, the score script, and the sweep
+anew on `stx analyze`. Package 4 writes the `score` verb and its `train.yml`
+step anew too, in the old shape. Beyond that verb and that step, the three
+packages change no old module.
 
 Plan 006 packages 1 and 2 are the seed and the card rule, and package 2 waits on
 those two packages only. It opens with the card. Plan 006 packages 3 to 7 land
@@ -99,9 +101,9 @@ package 6 lands every rule of it. Package 1 adds the pair write to the
 rule of the unit, so this plan cites the unit under `Defers:`.
 
 TRN-EXEC is done, and this plan changes no rule of it. `make train-sft` and the
-promote verb are existing capabilities. Package 4 changes the `score` verb of
-`scripts/train`, and the verb implements no rule of the unit. This plan
-therefore cites the unit under `Defers:`.
+promote verb are existing capabilities. Package 4 writes the `score` verb of
+`scripts/train` and its `train.yml` step anew, and the verb implements no rule
+of the unit. This plan therefore cites the unit under `Defers:`.
 
 ## Decisions
 
@@ -184,10 +186,14 @@ Each package sets the register row of its unit in the same change.
    (ENG-DETERM-1). The output names no model internal: no token, no logit, and
    no prompt (ENG-CONTRACT-1). A purpose-built engine can then replace the model
    without a client change (ENG-CONTRACT-2). The verb reads the grammar from the
-   generated copy under `share/`. Tests: `t/stx.t` covers the finding shape and
-   the offsets against a fixture llama.cpp command. A determinism test runs the
-   verb twice on one input under the pins of decision T2. It compares the
-   outputs byte for byte (ENG-DETERM-2).
+   generated copy under `share/`. The verb carries the two transports of the old
+   `label` verb. The exec command is the default, and it runs llama.cpp once per
+   document. The `--server` option posts to one warm `llama-server` instead, and
+   the `score` verb of package 4 uses it on the train instance. Tests: `t/stx.t`
+   covers the finding shape and the offsets against a fixture llama.cpp command.
+   It covers the `--server` transport against a fixture server. A determinism
+   test runs the verb twice on one input under the pins of decision T2. It
+   compares the outputs byte for byte (ENG-DETERM-2).
 4. **The metrics and tier T0.** EVL-TIERS-2 and EVL-TIERS-6. Waits on package 3,
    and plan 006 package 4 waits on it. Write a new `score.py` and a new `t0.py`
    on the `analyze` output. The old modules scored the treebank, and they left
@@ -198,17 +204,19 @@ Each package sets the register row of its unit in the same change.
    holds the counts, and plan 006 widens them per category and per length
    bucket. The baseline scorecard of plan 011 follows the same form. The tier T0
    job of `check.yml` returns with `t0.py`. It runs the score script on the dev
-   split on every commit, on the CPU (EVL-TIERS-2). Change the `score` verb of
-   `scripts/train`. The verb keeps its present shape: a dispatch on the train
-   instance through `train-driver serve`, inside the lease. Plan 006 package 6
-   and plan 007 step 5 assume that shape. The verb runs the new `t0.py` against
-   the GGUF of the run. It writes the dev scorecard to the artifacts bucket
-   under the run identifier, in the key form of EVL-TIERS-8. That write is the
-   existing capability of EVL-TIERS-1. Package 2 dispatches the verb after
-   `gguf`, and package 6 promotes against its scorecard. Tests: a new
-   `test_score.py` and a new `test_t0.py` cover the two dev metrics from fixture
-   counts. They also cover a self-score of a fixture at balanced accuracy 1.
-   `t/train.t` covers the `score` verb and its scorecard key.
+   split on every commit, on the CPU (EVL-TIERS-2). Write the `score` verb of
+   `scripts/train` and its `train.yml` step anew. Both left in plan 011
+   package 2. The verb takes its old shape: a dispatch on the train instance
+   through `train-driver serve`, inside the lease. Plan 006 package 6 and plan
+   007 step 5 assume that shape. The verb runs the new `t0.py` against the GGUF
+   of the run, through the `--server` transport of package 3. It writes the dev
+   scorecard to the artifacts bucket under the run identifier, in the key form
+   of EVL-TIERS-8. That write is the existing capability of EVL-TIERS-1. Package
+   2 dispatches the verb after `gguf`, and package 6 promotes against its
+   scorecard. Tests: a new `test_score.py` and a new `test_t0.py` cover the two
+   dev metrics from fixture counts. They also cover a self-score of a fixture at
+   balanced accuracy 1. `t/train.t` covers the `score` verb and its scorecard
+   key.
 5. **The tier T1 sweep.** EVL-TIERS-3. Waits on packages 2 and 4, and plan 006
    packages 4 to 7 wait on it. Write the sweep anew in `t1.py`, and write a new
    workflow `t1.yml`. The workflow takes the run identifier and the split as
@@ -259,11 +267,15 @@ Each package sets the register row of its unit in the same change.
 
 One SFT pass at 0.6B costs 1 to 2 GPU-hours on the H100-1-80G, EUR 3 to 6 at the
 price read 2026-08-28. The compute budget table of
-[the training document](../../spec/training.md#trn-budget) holds the row. The
-lease holds the pass, the conversion, and the dev score. The conversion and the
-dev score take minutes at this scale. A forecast must not assume a run cheaper
-than one hour (TRN-BUDGET-1). The sweep, the tier T0 script, and the tests run
-on the CPU, on the CI runners.
+[the training document](../../spec/training.md#trn-budget) holds the row of the
+pass. The lease holds the pass, the conversion, and a serial dev score. The dev
+score runs one record at a time, and its duration is unmeasured. The eight-slot
+serve of plan 006 package 6 lands after this plan. The forecast assumes that the
+dev score takes up to the duration of the pass. The lease is therefore 2 to 4
+GPU-hours, EUR 6 to 12 at the same price. The experiment card of package 2
+records the measured duration of the pass and of the dev score. A forecast must
+not assume a run cheaper than one hour (TRN-BUDGET-1). The sweep, the tier T0
+script, and the tests run on the CPU, on the CI runners.
 
 ## Out of scope
 
