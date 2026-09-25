@@ -3,7 +3,7 @@
 This plan builds the pair corpus of decision T12, and it admits each pair
 through the judge of decision T5. Then it runs the zero-training baseline of
 decision T13 on the admitted pairs and the later-era human-only set. The phase
-ends with a baseline scorecard, the bar and the tier T1 thresholds, and the
+ends with a baseline scorecard, the bar, two tier T1 thresholds, and the
 LEARNING batch of the campaign. No training pass is part of this plan. The
 roadmap holds this work as phase P11.
 
@@ -81,11 +81,17 @@ baseline scorecard of EVL-TIERS-9, and plan 006 lands the comparison half of the
 same rule. The baseline scorecard holds the three metrics of
 [the evaluation document](../../spec/evaluation.md#evl-tiers) and the confusion
 counts, in the shape of every later scorecard. After the baseline run, the
-operator sets the tier T1 thresholds of EVL-TIERS-5 and the bar of EVL-TIERS-10.
-Package 8 writes them, and phase P12 runs the first SFT campaign against them.
-The tier T0 job of EVL-TIERS-2 and the tier T1 sweep of EVL-TIERS-3 land in
-phase P12. The score script of that phase lands EVL-TIERS-6, and the baseline
-scorecard follows its form. The tier T2 suite of EVL-TIERS-4 waits for phase P5.
+operator sets the bar of EVL-TIERS-10 and two tier T1 thresholds of EVL-TIERS-5.
+The two are balanced accuracy and the false-positive rate, the metrics that the
+baseline yields. Package 8 writes them, and phase P12 runs the first SFT
+campaign against them. EVL-TIERS-5 lands here for those two metrics. It stays
+absent for category agreement, because the baseline emits no category. The
+register note of package 8 names that absent part. The first scorecard that
+emits categories fixes the category-agreement threshold in phase P12, and plan
+012 writes it. The tier T0 job of EVL-TIERS-2 and the tier T1 sweep of
+EVL-TIERS-3 land in phase P12. The score script of that phase lands EVL-TIERS-6,
+and the baseline scorecard follows its form. The tier T2 suite of EVL-TIERS-4
+waits for phase P5.
 
 LRN-DELIVER-2 and LRN-DELIVER-3 change the FuguTTX repository. A FuguTTX plan
 lands each change.
@@ -330,22 +336,28 @@ the row of each unit whose note cites a file that the package removes.
 8. **The bar, the thresholds, and the LEARNING batch.** EVL-TIERS-5,
    EVL-TIERS-10, TRN-TEACH-6, TRN-TEACH-10, and LRN-DELIVER. Waits on package 7
    and on the operator. The operator reads the baseline scorecard and the
-   rejection log. Then the operator sets the pilot bar and each tier T1
-   threshold. This package writes the bar and the tier T1 thresholds into
+   rejection log. Then the operator sets the pilot bar and two tier T1
+   thresholds. Those are the thresholds of balanced accuracy and the
+   false-positive rate, the two metrics that the baseline yields. This package
+   writes the bar and those two thresholds into
    [the evaluation document](../../spec/evaluation.md#evl-tiers) (EVL-TIERS-5,
-   EVL-TIERS-10). It writes each judge threshold and bound of the card into
+   EVL-TIERS-10). The category-agreement threshold has no baseline number,
+   because the baseline emits no category. The first scorecard that emits
+   categories fixes it in phase P12, and plan 012 writes it. Until then, the
+   evaluation document holds no category-agreement threshold, as EVL-TIERS-5
+   requires. This package writes each judge threshold and bound of the card into
    [the training document](../../spec/training.md#trn-teach) (TRN-TEACH-10). It
-   sets each register row, and the EVL-TIERS note names the baseline label. It
-   delivers the batch: the memorization rate per era and per generator, the
-   labeler agreement rate, each rejection rate, and the baseline numbers. Each
-   numeric claim meets the verifier (LRN-DELIVER-8), and the batch cites the
-   library pages (LRN-DELIVER-7). Add two rows to
-   [the library index](../../spec/LEARNING.md#lrn-map). One row is the pair
-   corpus and the judge filter, on the page `Library-FuguSTX-pair-corpus`. The
-   other row is the zero-training baseline, on the page
-   `Library-FuguSTX-baseline`. The rows rehearse FuguTTX TRN-AUG, FuguTTX D4,
-   and FuguTTX D5. Name the `segment` verb and the baseline scorer in the stage
-   map of `train/RUNBOOK.md`.
+   sets each register row. The EVL-TIERS note names the baseline label and the
+   absent category-agreement threshold. It delivers the batch: the memorization
+   rate per era and per generator, the labeler agreement rate, each rejection
+   rate, and the baseline numbers. Each numeric claim meets the verifier
+   (LRN-DELIVER-8), and the batch cites the library pages (LRN-DELIVER-7). Add
+   two rows to [the library index](../../spec/LEARNING.md#lrn-map). One row is
+   the pair corpus and the judge filter, on the page
+   `Library-FuguSTX-pair-corpus`. The other row is the zero-training baseline,
+   on the page `Library-FuguSTX-baseline`. The rows rehearse FuguTTX TRN-AUG,
+   FuguTTX D4, and FuguTTX D5. Name the `segment` verb and the baseline scorer
+   in the stage map of `train/RUNBOOK.md`.
 
 ## The budget
 
