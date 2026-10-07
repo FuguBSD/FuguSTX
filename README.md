@@ -1,14 +1,15 @@
 # FuguSTX
 
-FuguSTX finds the tells of machine-written prose in English technical text,
-built as the pilot of FuguTTX. The engine reads a document and reports one
-finding per sentence: the byte offsets, a verdict, and a tell category. A tool
-or an agent repairs the text from the findings.
+FuguSTX finds the tells of machine-written prose in English technical text. The
+engine reads a document and reports one finding per sentence: the byte offsets,
+a verdict, and a tell category. A tool or an agent repairs the text from the
+findings.
 
 The engine is a Qwen3-0.6B fine-tune under llama.cpp, on the CPU only. The model
 learns from pairs of a human document and a machine mirror of the same facts.
-The `stx` harness, Perl 5 over Fugu, computes every byte offset. The build
-rehearses the FuguTTX production pipeline at small scale.
+The `stx` harness, Perl 5 over Fugu, computes every byte offset. The project is
+the pilot of [FuguTTX](https://github.com/FuguBSD/FuguTTX), and the build
+rehearses its production pipeline at small scale.
 
 ## Commands
 
