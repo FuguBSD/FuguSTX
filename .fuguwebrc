@@ -1,6 +1,8 @@
 # The website, built by fuguweb(1).
 
-site = FuguSTX
+site   = FuguSTX
+url    = https://stx.fugubsd.org/
+footer = footer.body.html
 
 nav "index.html" {
 	label = Home
